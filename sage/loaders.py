@@ -72,7 +72,7 @@ def load_file_text(path: Path) -> str:
     suffix = path.suffix.lower()
     if is_env_file(path):
         return _load_env(path)
-    if suffix in {".txt", ".md", ".markdown"}:
+    if suffix in {".txt", ".md", ".markdown", ".log"}:
         return _read_text(path)
     if suffix == ".pdf":
         return _load_pdf(path)

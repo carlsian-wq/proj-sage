@@ -5,7 +5,7 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\launch_project_sage.ps1
 
 param(
-    [int]$Port = 8501,
+    [int]$Port = 8504,
     [string]$Browser = "chrome"
 )
 

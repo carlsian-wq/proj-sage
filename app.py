@@ -279,7 +279,7 @@ def _sidebar() -> None:
         type=upload_types,
         accept_multiple_files=True,
         disabled=not bool(tag),
-        help="Includes yaml/yml and env. All files stay on this machine (local Ollama + data/).",
+        help="Includes yaml/yml, env, and log. All files stay on this machine (local Ollama + data/).",
     )
     if uploads and st.sidebar.button("Upload & ingest", use_container_width=True, disabled=not bool(tag)):
         log_lines: list[str] = []

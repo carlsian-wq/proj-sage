@@ -5,7 +5,7 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\start_streamlit.ps1
 
 param(
-    [int]$Port = 8501
+    [int]$Port = 8504
 )
 
 $ErrorActionPreference = "Stop"

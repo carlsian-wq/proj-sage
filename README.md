@@ -7,7 +7,7 @@ Local **RAG search agent** for coding project documentation.
 - **Embeddings:** Ollama `nomic-embed-text`  
 - **Vector store:** Chroma (on disk under `data/`)
 
-Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
+Tag projects, point at local folders or upload files (`txt`, `md`, `log`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
 
 ## Requirements
 
@@ -41,7 +41,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 
 | Shortcut | Purpose |
 |----------|---------|
-| **Project Sage** | Start server if needed → open as desktop web app (`--app=http://localhost:8501`) |
+| **Project Sage** | Start server if needed → open as desktop web app (`--app=http://localhost:8504`) |
 | **Project Sage Streamlit** | Streamlit console only |
 
 Details: [STARTUP.md](STARTUP.md).
@@ -52,7 +52,7 @@ Details: [STARTUP.md](STARTUP.md).
 .\.venv\Scripts\streamlit run app.py
 ```
 
-Open the URL Streamlit prints (usually http://localhost:8501).
+Open the URL Streamlit prints (usually http://localhost:8504).
 
 ## How to use
 
@@ -91,13 +91,13 @@ Everything stays on your machine. `data/` is gitignored.
 - Legacy `.doc` extraction is best-effort; prefer `.docx` or `.pdf`.
 - Ollama must be reachable at `http://127.0.0.1:11434`.
 - First embed/search can be slow while models load into memory.
-- Default port is **8501** (avoid conflict with Log Sage on 8502).
+- Default port is **8504** (8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp).
 
 ## Supported formats & privacy
 
 | Format | Notes |
 |--------|--------|
-| `.txt`, `.md` | Plain text |
+| `.txt`, `.md`, `.log` | Plain text (logs decoded as UTF-8 / common fallbacks) |
 | `.pdf`, `.csv`, `.json` | Extracted / pretty-printed locally |
 | `.yaml`, `.yml` | Parsed with **PyYAML `safe_load`** (no code execution) |
 | `.env`, `.env.*`, `*.env` | Parsed as dotenv key/value text for local search |
@@ -108,7 +108,7 @@ Everything stays on your machine. `data/` is gitignored.
 - Embeddings and answers use **local Ollama** only (`127.0.0.1:11434`).
 - Vectors and uploads live under **`data/`** (gitignored) on your disk.
 - Project Sage does **not** call external LLM/cloud APIs.
-- `.env` content is still sensitive: anyone with access to your PC/`data/` can read the index. Do not commit `data/`, and do not expose port 8501 on untrusted networks.
+- `.env` content is still sensitive: anyone with access to your PC/`data/` can read the index. Do not commit `data/`, and do not expose port 8504 on untrusted networks.
 
 ## Project layout
 

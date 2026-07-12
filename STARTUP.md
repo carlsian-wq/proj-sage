@@ -17,7 +17,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1 -
 
 | Desktop shortcut | What it does |
 |------------------|--------------|
-| **Project Sage** | Starts Streamlit if needed, ensures Ollama is up, opens Chrome/Edge in `--app` mode (desktop web app, no browser tabs) at http://localhost:8501 |
+| **Project Sage** | Starts Streamlit if needed, ensures Ollama is up, opens Chrome/Edge in `--app` mode (desktop web app, no browser tabs) at http://localhost:8504 |
 | **Project Sage Streamlit** | Streamlit server console only (keep this open while using the app) |
 
 Both shortcuts use the Project Sage logo (`assets/logo.ico`).
@@ -28,23 +28,24 @@ Both shortcuts use the Project Sage logo (`assets/logo.ico`).
 cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
 .\.venv\Scripts\Activate.ps1
 streamlit run app.py
+# uses port 8504 from .streamlit/config.toml (or: --server.port 8504)
 ```
 
-Then open http://localhost:8501, or as a desktop app:
+Then open http://localhost:8504, or as a desktop app:
 
 ```powershell
 # Chrome
-& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --app=http://localhost:8501
+& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --app=http://localhost:8504
 
 # Edge
-& "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8501
+& "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8504
 ```
 
 ## Prerequisites
 
 1. `.venv` installed (`pip install -r requirements.txt`)
 2. Ollama running with `qwen2.5:7b` and `nomic-embed-text`
-3. Port **8501** free (Log Sage uses 8502 by default)
+3. Port **8504** free (local map: 8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp)
 
 ## Project tags
 
@@ -73,12 +74,13 @@ Retrieval results normalize missing Chroma documents to `""` so formatting never
 
 **Clear Search:** sets a session flag and reruns; the query widget key is cleared at the top of the next run (Streamlit forbids changing `st.session_state.<widget_key>` after that widget is instantiated).
 
-## Formats: YAML & env (local only)
+## Formats: YAML, env & logs (local only)
 
-Supported alongside docs: **`.yaml` / `.yml`** and **`.env`** (also `.env.local`, `*.env`).
+Supported alongside docs: **`.yaml` / `.yml`**, **`.env`** (also `.env.local`, `*.env`), and **`.log`**.
 
 - YAML: `yaml.safe_load` only (requires `PyYAML` in `.venv`).
 - Env: keys/values indexed into local Chroma under `data/` for natural-language questions about config.
+- Log: plain-text load (UTF-8 and common fallbacks) — good for app/server logs under watched folders.
 - No cloud upload — Ollama + Streamlit stay on localhost. Keep `data/` private and gitignored.
 
 After upgrading deps:
@@ -87,7 +89,7 @@ After upgrading deps:
 .\.venv\Scripts\pip install -r requirements.txt
 ```
 
-Then **Force ingest** the project so existing folders pick up new `.yaml` / `.env` files.
+Then **Force ingest** the project so existing folders pick up new `.yaml` / `.env` / `.log` files.
 
 ## Scripts
 

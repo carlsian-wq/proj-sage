@@ -1,0 +1,6 @@
+# Project Sage — local Streamlit settings
+# Port map (this machine): 8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp, 8504 Project Sage
+
+[server]
+port = 8504
+headless = true

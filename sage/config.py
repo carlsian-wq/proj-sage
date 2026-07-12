@@ -11,6 +11,10 @@ REGISTRY_PATH = DATA_DIR / "registry.json"
 CHROMA_DIR = DATA_DIR / "chroma"
 UPLOADS_DIR = DATA_DIR / "uploads"
 
+# Streamlit UI port (scripts + .streamlit/config.toml must stay in sync)
+# Local map: 8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp, 8504 Project Sage
+STREAMLIT_PORT = 8504
+
 # Ollama models (match local install)
 EMBED_MODEL = "nomic-embed-text"
 LLM_MODEL = "qwen2.5:7b"
@@ -28,6 +32,7 @@ SUPPORTED_EXTENSIONS = {
     ".txt",
     ".md",
     ".markdown",
+    ".log",
     ".pdf",
     ".csv",
     ".json",
