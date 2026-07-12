@@ -35,6 +35,22 @@ from sage.registry import (
 )
 from sage.watcher import get_watcher
 
+# Prefer helpers from registry; keep local fallbacks so a partial OneDrive
+# sync of registry.py cannot crash the page on import.
+try:
+    from sage.registry import normalize_tag, suggest_tag_from_path
+except ImportError:  # pragma: no cover - transient sync / stale process
+    def normalize_tag(tag: str) -> str:
+        return " ".join((tag or "").split()).strip()
+
+    def suggest_tag_from_path(folder_path: str | Path) -> str:
+        try:
+            path = Path(folder_path).expanduser()
+            name = path.resolve().name if path.exists() else path.name
+        except OSError:
+            name = Path(str(folder_path)).name
+        return normalize_tag(name)
+
 LOGO_PATH = ROOT / "assets" / "logo.jpg"
 _PAGE_ICON = str(LOGO_PATH) if LOGO_PATH.is_file() else "🌿"
 
@@ -131,12 +147,17 @@ def _sidebar() -> None:
     projects = _refresh_projects()
 
     st.sidebar.subheader("Project tags")
-    new_tag = st.sidebar.text_input("Create / select tag", placeholder="e.g. my-api-docs")
+    new_tag = st.sidebar.text_input(
+        "Create project tag",
+        placeholder="e.g. my-api-docs",
+        help="Optional if you add a folder below — the folder name becomes the tag automatically.",
+    )
     if st.sidebar.button("Create / select project", use_container_width=True):
-        if new_tag and new_tag.strip():
-            ensure_project(new_tag.strip())
-            st.session_state.selected_tag = new_tag.strip()
-            st.sidebar.success(f"Project “{new_tag.strip()}” ready.")
+        tag_name = normalize_tag(new_tag or "")
+        if tag_name:
+            ensure_project(tag_name)
+            st.session_state.selected_tag = tag_name
+            st.sidebar.success(f"Project “{tag_name}” ready.")
             st.rerun()
         else:
             st.sidebar.warning("Enter a project name tag.")
@@ -148,55 +169,107 @@ def _sidebar() -> None:
             index=projects.index(st.session_state.selected_tag)
             if st.session_state.selected_tag in projects
             else 0,
+            help="Used for uploads, force-ingest, and sources list. Folder add uses its own tag field.",
         )
         st.session_state.selected_tag = selected
     else:
-        st.sidebar.info("Create a project tag to get started.")
+        st.sidebar.info("Add a local folder below (tag is created from the folder name), or create a tag first.")
         st.session_state.selected_tag = None
-        return
 
     tag = st.session_state.selected_tag
-    st.sidebar.divider()
-    st.sidebar.subheader(f"Sources · {tag}")
 
-    # Local folder path
+    st.sidebar.divider()
+    st.sidebar.subheader("Add local folder")
+    st.sidebar.caption(
+        "Folder name becomes the project tag (and appears in filter dropdowns) unless you override it."
+    )
+
     folder = st.sidebar.text_input(
         "Local folder path",
         placeholder=r"C:\Users\...\my-project",
+        key="folder_path_input",
         help="All supported docs under this folder will be indexed (skipping node_modules, .git, venvs, …).",
     )
-    if st.sidebar.button("Add folder source", use_container_width=True):
+
+    # Keep tag field in sync with the folder basename when the path changes
+    suggested = suggest_tag_from_path(folder) if (folder or "").strip() else ""
+    prev_path = st.session_state.get("_folder_path_for_tag", "")
+    if (folder or "") != prev_path:
+        st.session_state._folder_path_for_tag = folder or ""
+        if suggested:
+            st.session_state.folder_tag_input = suggested
+
+    if "folder_tag_input" not in st.session_state:
+        st.session_state.folder_tag_input = suggested or (tag or "")
+
+    folder_tag = st.sidebar.text_input(
+        "Project tag for this folder",
+        key="folder_tag_input",
+        help="Auto-filled from the folder name. Edit to use a different tag. Created if it does not exist.",
+    )
+
+    use_active = False
+    if tag:
+        use_active = st.sidebar.checkbox(
+            f"Attach to active project instead ({tag})",
+            value=False,
+            help="When checked, the folder is stored under the Active project tag above.",
+        )
+
+    if st.sidebar.button("Add folder source", use_container_width=True, type="primary"):
         if not folder or not folder.strip():
             st.sidebar.warning("Enter a folder path.")
         else:
-            try:
-                add_folder_source(tag, folder.strip())
-                with st.spinner("Ingesting folder…"):
-                    log_lines: list[str] = []
-                    # Ingest the newly added source (last one)
-                    srcs = get_project_sources(tag)
-                    folder_src = next(
-                        (s for s in reversed(srcs) if s.get("type") == "folder" and Path(s["path"]) == Path(folder.strip()).expanduser().resolve()),
-                        srcs[-1] if srcs else None,
-                    )
-                    if folder_src:
-                        report = ingest_source(
-                            tag,
-                            folder_src,
-                            force=False,
-                            progress=lambda m: log_lines.append(m),
+            target_tag = tag if use_active and tag else normalize_tag(folder_tag or "")
+            if not target_tag:
+                target_tag = suggest_tag_from_path(folder.strip())
+            if not target_tag:
+                st.sidebar.warning("Could not determine a project tag. Enter one above.")
+            else:
+                try:
+                    ensure_project(target_tag)
+                    add_folder_source(target_tag, folder.strip())
+                    with st.spinner(f"Ingesting into project “{target_tag}”…"):
+                        log_lines: list[str] = []
+                        srcs = get_project_sources(target_tag)
+                        resolved = Path(folder.strip()).expanduser().resolve()
+                        folder_src = next(
+                            (
+                                s
+                                for s in reversed(srcs)
+                                if s.get("type") == "folder"
+                                and Path(s["path"]).resolve() == resolved
+                            ),
+                            srcs[-1] if srcs else None,
                         )
-                        st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
-                st.sidebar.success("Folder added and ingested.")
-                # Restart watcher so new folder is included
-                w = get_watcher()
-                if w.running:
-                    st.session_state.watcher_status = w.restart()
-                st.rerun()
-            except Exception as e:
-                st.sidebar.error(str(e))
+                        if folder_src:
+                            report = ingest_source(
+                                target_tag,
+                                folder_src,
+                                force=False,
+                                progress=lambda m: log_lines.append(m),
+                            )
+                            st.session_state.last_ingest_log = (
+                                f"Project tag: {target_tag}\n"
+                                + "\n".join(log_lines)
+                                + "\n\n"
+                                + report.summary()
+                            )
+                    st.session_state.selected_tag = target_tag
+                    st.sidebar.success(
+                        f"Folder added under project tag “{target_tag}” (now in filter dropdowns)."
+                    )
+                    w = get_watcher()
+                    if w.running:
+                        st.session_state.watcher_status = w.restart()
+                    st.rerun()
+                except Exception as e:
+                    st.sidebar.error(str(e))
 
-    # File upload
+    st.sidebar.divider()
+    st.sidebar.subheader(f"Uploads · {tag or 'select a project'}")
+
+    # File upload (requires an active project)
     st.sidebar.caption(
         "Supported: " + ", ".join(sorted(SUPPORTED_EXTENSIONS))
     )
@@ -204,18 +277,22 @@ def _sidebar() -> None:
         "Upload project files",
         type=[ext.lstrip(".") for ext in sorted(SUPPORTED_EXTENSIONS)],
         accept_multiple_files=True,
+        disabled=not bool(tag),
     )
-    if uploads and st.sidebar.button("Upload & ingest", use_container_width=True):
+    if uploads and st.sidebar.button("Upload & ingest", use_container_width=True, disabled=not bool(tag)):
         log_lines: list[str] = []
         with st.spinner("Uploading and embedding…"):
             for uf in uploads:
                 data = uf.getvalue()
                 dest = save_upload(tag, uf.name, data)
-                reg = add_upload_source(tag, dest, uf.name)
-                # Find the source entry for this file
+                add_upload_source(tag, dest, uf.name)
                 srcs = get_project_sources(tag)
                 match = next(
-                    (s for s in reversed(srcs) if s.get("type") == "file" and Path(s["path"]) == dest.resolve()),
+                    (
+                        s
+                        for s in reversed(srcs)
+                        if s.get("type") == "file" and Path(s["path"]) == dest.resolve()
+                    ),
                     None,
                 )
                 if match:
@@ -227,14 +304,19 @@ def _sidebar() -> None:
                     )
                     log_lines.append(report.summary())
         st.session_state.last_ingest_log = "\n".join(log_lines)
-        st.sidebar.success(f"Uploaded {len(uploads)} file(s).")
+        st.sidebar.success(f"Uploaded {len(uploads)} file(s) under “{tag}”.")
         st.rerun()
 
     st.sidebar.divider()
     st.sidebar.subheader("Force ingest")
     c1, c2 = st.sidebar.columns(2)
     with c1:
-        if st.button("This project", use_container_width=True, help="Re-ingest all sources under the active tag"):
+        if st.button(
+            "This project",
+            use_container_width=True,
+            help="Re-ingest all sources under the active tag",
+            disabled=not bool(tag),
+        ):
             with st.spinner(f"Ingesting project “{tag}”…"):
                 log_lines = []
                 report = ingest_project(tag, force=True, progress=lambda m: log_lines.append(m))
@@ -266,10 +348,17 @@ def _sidebar() -> None:
             st.rerun()
 
     with st.sidebar.expander("Sources for active project", expanded=True):
-        _render_sources_panel(tag)
+        if tag:
+            _render_sources_panel(tag)
+        else:
+            st.caption("No active project selected.")
 
     with st.sidebar.expander("Danger zone"):
-        if st.button("Delete project tag + vectors", type="secondary"):
+        if st.button(
+            "Delete project tag + vectors",
+            type="secondary",
+            disabled=not bool(tag),
+        ):
             vectorstore.delete_project(tag)
             delete_project(tag)
             st.session_state.selected_tag = None

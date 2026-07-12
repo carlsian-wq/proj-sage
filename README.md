@@ -30,6 +30,24 @@ pip install -r requirements.txt
 
 ## Run
 
+### Desktop app (Chrome / Edge)
+
+Install shortcuts once (logo icon included):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
+# optional: -Browser edge
+```
+
+| Shortcut | Purpose |
+|----------|---------|
+| **Project Sage** | Start server if needed → open as desktop web app (`--app=http://localhost:8501`) |
+| **Project Sage Streamlit** | Streamlit console only |
+
+Details: [STARTUP.md](STARTUP.md).
+
+### CLI
+
 ```powershell
 .\.venv\Scripts\streamlit run app.py
 ```
@@ -38,13 +56,23 @@ Open the URL Streamlit prints (usually http://localhost:8501).
 
 ## How to use
 
-1. **Create a project tag** in the sidebar (e.g. `my-api`).
-2. **Add sources**
-   - Paste a **local folder path** and click *Add folder source* (indexes all supported files; skips `.git`, `node_modules`, venvs, etc.), or
-   - **Upload** files under that tag.
+1. **Add a local folder** (simplest path):
+   - Paste a folder path in the sidebar.
+   - **Project tag defaults to the folder name** (e.g. `...\proj-sage` → tag `proj-sage`) and is **created automatically** if new.
+   - You can edit the tag before clicking *Add folder source*, or check *Attach to active project instead* to reuse the active tag.
+2. **Or create a tag first** with *Create project tag*, then upload files under the active project.
 3. Ingest runs automatically on add; use **Force ingest** if you need a full rebuild.
 4. Optionally **Start** the folder watcher so edits on disk re-embed automatically.
-5. In the main panel, choose **All projects** or a tag filter, type a question, **Search**.
+5. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**.
+
+> **Note:** Tags only appear in filter dropdowns after they exist in the registry. Adding a folder creates the tag; merely embedding under another active project (old behavior) did not.
+
+## Branding / assets
+
+| File | Use |
+|------|-----|
+| `assets/logo.jpg` | In-app header + sidebar logo |
+| `assets/logo.ico` | Windows desktop shortcut icon (built by `scripts/build_icon.py`) |
 
 ## Data layout
 
@@ -53,6 +81,7 @@ data/
   registry.json     # project tags + source metadata
   chroma/           # vector index
   uploads/          # files uploaded via the UI
+  launcher.log      # desktop launcher events
 ```
 
 Everything stays on your machine. `data/` is gitignored.
@@ -62,19 +91,34 @@ Everything stays on your machine. `data/` is gitignored.
 - Legacy `.doc` extraction is best-effort; prefer `.docx` or `.pdf`.
 - Ollama must be reachable at `http://127.0.0.1:11434`.
 - First embed/search can be slow while models load into memory.
+- Default port is **8501** (avoid conflict with Log Sage on 8502).
 
 ## Project layout
 
 ```
-app.py              # Streamlit entrypoint
+app.py                 # Streamlit entrypoint
+assets/
+  logo.jpg             # app branding
+  logo.ico             # shortcut icon
+scripts/
+  build_icon.py
+  launch_project_sage.ps1
+  start_streamlit.ps1
+  install_desktop_shortcuts.ps1
+  launch_project_sage.vbs
+STARTUP.md             # desktop / launcher guide
 sage/
-  config.py         # models, paths, extensions
-  registry.py       # project/source registry
-  loaders.py        # file text extraction
+  config.py            # models, paths, extensions
+  registry.py          # project/source registry
+  loaders.py           # file text extraction
   chunking.py
-  embeddings.py     # Ollama embeddings
-  vectorstore.py    # Chroma
-  ingest.py         # hash-aware ingest pipeline
-  rag.py            # retrieve + answer
-  watcher.py        # folder auto-ingest
+  embeddings.py        # Ollama embeddings
+  vectorstore.py       # Chroma
+  ingest.py            # hash-aware ingest pipeline
+  rag.py               # retrieve + answer
+  watcher.py           # folder auto-ingest
 ```
+
+## Documentation policy
+
+Update project documentation (`README.md`, `STARTUP.md`, and any feature-specific docs) **after every change turn** so startup steps, shortcuts, assets, and layout stay accurate.

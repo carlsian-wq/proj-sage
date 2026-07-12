@@ -52,8 +52,30 @@ def list_projects(registry: dict[str, Any] | None = None) -> list[str]:
     return sorted(reg.get("projects", {}).keys(), key=str.lower)
 
 
+def normalize_tag(tag: str) -> str:
+    """Trim and collapse whitespace for project tags.
+
+    Exported for app.py (folder-add auto-tag flow).
+    """
+    return " ".join((tag or "").split()).strip()
+
+
+def suggest_tag_from_path(folder_path: str | Path) -> str:
+    """Default project tag = leaf folder name (e.g. .../proj-sage -> proj-sage).
+
+    Exported for app.py so new folders create a matching filter tag.
+    """
+    try:
+        path = Path(folder_path).expanduser()
+        # Prefer resolved name when path exists; else use the typed segment
+        name = path.resolve().name if path.exists() else path.name
+    except OSError:
+        name = Path(str(folder_path)).name
+    return normalize_tag(name)
+
+
 def ensure_project(tag: str, registry: dict[str, Any] | None = None) -> dict[str, Any]:
-    tag = tag.strip()
+    tag = normalize_tag(tag)
     if not tag:
         raise ValueError("Project tag cannot be empty.")
     reg = registry if registry is not None else load_registry()
@@ -78,6 +100,7 @@ def add_folder_source(tag: str, folder_path: str) -> dict[str, Any]:
     if not path.is_dir():
         raise ValueError(f"Not a directory: {path}")
 
+    # Always create the project tag if missing (folder add is a common first step)
     reg = ensure_project(tag)
     sources = reg["projects"][tag]["sources"]
     path_str = str(path)
