@@ -1,0 +1,38 @@
+NEW PROJECT: (start in GitHub/ for easy access to my local project repo folders)
+
+Project Name = Project Sage 
+
+Language = Python (using symlinks to my local python installation)
+
+Local Project Repo Folder = C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+
+Create GitHub = carlsian-wq/proj-sage (public/enable README.md)
+
+
+PROJECT SCOPE/FOCUS: (user is open to Grok Build suggestions/recommendations)
+
+An intelligent search agent using my current install of Ollama with qwen2.5:7b with nomic
+
+embedding. The agent should have a Streamlit web interface so the user can search (using natural language input)
+
+for any coding projects documentation. Project sources could be in txt, pdf, md, csv, doc, docx, json formats 
+
+to be ingested and embedded by the agent. The UI should have an input for a project name tag creator/selector, 
+
+another input for a path picker for if the project is in the users local folder, and a file picker so 
+
+the user can upload project files under specific project name tags that may not be in a local folder. Those sources  
+
+can then be tagged/stored/ingested/embedded under each respective projects name (tag) by the agent. Ingesting and 
+
+embedding should be automated for any new sources or if an existing source is updated through manual upload or 
+
+normal local project folder docs updates. The sidebar should also have buttons to force ingesting and embedding of 
+
+the a selected source or the entire source tags list if necessary. The main UI is a project docs search bar with an 
+
+additional dropdown tag selector to filter for specific project names. Under the search bar and tag selector should 
+
+be a large rich area to display the intelligent search results formatted in pleasant human readable format. Let me 
+
+know if you have any questions or recommendations for this project.

@@ -1,0 +1,2 @@
+﻿# Deploy Notes
+Use docker compose up. Default port is 8080. Healthcheck is GET /health.
