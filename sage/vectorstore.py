@@ -158,10 +158,12 @@ def query(
         dist = dists[i] if i < len(dists) else None
         # cosine distance -> rough similarity
         score = None if dist is None else max(0.0, 1.0 - float(dist))
+        # Chroma sometimes yields None documents; keep str for UI/RAG formatters
+        text = "" if doc is None else str(doc)
         hits.append(
             {
                 "id": ids[i] if i < len(ids) else None,
-                "text": doc,
+                "text": text,
                 "metadata": meta or {},
                 "score": score,
             }

@@ -7,7 +7,7 @@ Local **RAG search agent** for coding project documentation.
 - **Embeddings:** Ollama `nomic-embed-text`  
 - **Vector store:** Chroma (on disk under `data/`)
 
-Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
+Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
 
 ## Requirements
 
@@ -63,7 +63,7 @@ Open the URL Streamlit prints (usually http://localhost:8501).
 2. **Or create a tag first** with *Create project tag*, then upload files under the active project.
 3. Ingest runs automatically on add; use **Force ingest** if you need a full rebuild.
 4. Optionally **Start** the folder watcher so edits on disk re-embed automatically.
-5. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**.
+5. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**. Use **Clear Search** next to Search to reset the query and results.
 
 > **Note:** Tags only appear in filter dropdowns after they exist in the registry. Adding a folder creates the tag; merely embedding under another active project (old behavior) did not.
 
@@ -92,6 +92,23 @@ Everything stays on your machine. `data/` is gitignored.
 - Ollama must be reachable at `http://127.0.0.1:11434`.
 - First embed/search can be slow while models load into memory.
 - Default port is **8501** (avoid conflict with Log Sage on 8502).
+
+## Supported formats & privacy
+
+| Format | Notes |
+|--------|--------|
+| `.txt`, `.md` | Plain text |
+| `.pdf`, `.csv`, `.json` | Extracted / pretty-printed locally |
+| `.yaml`, `.yml` | Parsed with **PyYAML `safe_load`** (no code execution) |
+| `.env`, `.env.*`, `*.env` | Parsed as dotenv key/value text for local search |
+| `.doc`, `.docx` | Docx preferred |
+
+**Local & secure by design**
+
+- Embeddings and answers use **local Ollama** only (`127.0.0.1:11434`).
+- Vectors and uploads live under **`data/`** (gitignored) on your disk.
+- Project Sage does **not** call external LLM/cloud APIs.
+- `.env` content is still sensitive: anyone with access to your PC/`data/` can read the index. Do not commit `data/`, and do not expose port 8501 on untrusted networks.
 
 ## Project layout
 

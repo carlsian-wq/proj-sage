@@ -10,11 +10,21 @@ from typing import Callable
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from sage.config import SUPPORTED_EXTENSIONS
 from sage.ingest import ingest_file
+from sage.loaders import is_env_file, is_supported_file
 from sage.registry import get_all_sources
 
 ProgressCb = Callable[[str], None]
+
+
+def _is_under_hidden_dir(path: Path) -> bool:
+    """True if any parent directory is hidden (e.g. .git, .venv). Allows .env files."""
+    for part in path.parent.parts:
+        if part in (".", "..", ""):
+            continue
+        if part.startswith("."):
+            return True
+    return False
 
 
 class _DebouncedHandler(FileSystemEventHandler):
@@ -39,12 +49,22 @@ class _DebouncedHandler(FileSystemEventHandler):
 
     def _schedule(self, path: str) -> None:
         p = Path(path)
-        if p.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        from sage.config import SUPPORTED_EXTENSIONS
+
+        # is_supported_file requires an existing file; events may fire before stat settles
+        ok = is_supported_file(p) if p.is_file() else (
+            is_env_file(p) or p.suffix.lower() in SUPPORTED_EXTENSIONS
+        )
+        if not ok:
             return
-        if any(part.startswith(".") for part in p.parts):
+        if _is_under_hidden_dir(p):
             return
         with self._lock:
-            self._pending[str(p.resolve())] = time.time()
+            try:
+                key = str(p.resolve())
+            except OSError:
+                key = str(p)
+            self._pending[key] = time.time()
 
     def on_created(self, event: FileSystemEvent) -> None:
         if not event.is_directory:

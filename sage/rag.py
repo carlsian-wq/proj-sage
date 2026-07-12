@@ -20,17 +20,24 @@ Rules:
 """
 
 
+def _hit_text(hit: dict[str, Any]) -> str:
+    """Chroma may return document=None; never call .strip() on None."""
+    text = hit.get("text")
+    if text is None:
+        return ""
+    return str(text).strip()
+
+
 def _format_context(hits: list[dict[str, Any]]) -> str:
     parts: list[str] = []
     for i, hit in enumerate(hits, start=1):
         meta = hit.get("metadata") or {}
-        tag = meta.get("project_tag", "?")
-        path = meta.get("source_path", "?")
+        tag = meta.get("project_tag") or "?"
+        path = meta.get("source_path") or "?"
         score = hit.get("score")
         score_s = f"{score:.2f}" if isinstance(score, (int, float)) else "n/a"
-        parts.append(
-            f"[{i}] project={tag} | score={score_s} | file={path}\n{hit.get('text', '').strip()}"
-        )
+        body = _hit_text(hit) or "(empty excerpt)"
+        parts.append(f"[{i}] project={tag} | score={score_s} | file={path}\n{body}")
     return "\n\n".join(parts)
 
 
@@ -96,4 +103,4 @@ def search_and_answer(
             "error": f"LLM generation failed: {e}. Is Ollama running with model '{LLM_MODEL}'?",
         }
 
-    return {"answer": answer.strip(), "hits": hits, "error": None}
+    return {"answer": (answer or "").strip(), "hits": hits, "error": None}

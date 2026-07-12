@@ -67,6 +67,28 @@ Usually a stale process or OneDrive mid-sync on `sage/*.py`. Fix:
 
 `normalize_tag` / `suggest_tag_from_path` live in `sage/registry.py` and are also guarded with fallbacks in `app.py`.
 
+## Search robustness
+
+Retrieval results normalize missing Chroma documents to `""` so formatting never calls `.strip()` on `None` (fixed when some hits had null `text`).
+
+**Clear Search:** sets a session flag and reruns; the query widget key is cleared at the top of the next run (Streamlit forbids changing `st.session_state.<widget_key>` after that widget is instantiated).
+
+## Formats: YAML & env (local only)
+
+Supported alongside docs: **`.yaml` / `.yml`** and **`.env`** (also `.env.local`, `*.env`).
+
+- YAML: `yaml.safe_load` only (requires `PyYAML` in `.venv`).
+- Env: keys/values indexed into local Chroma under `data/` for natural-language questions about config.
+- No cloud upload — Ollama + Streamlit stay on localhost. Keep `data/` private and gitignored.
+
+After upgrading deps:
+
+```powershell
+.\.venv\Scripts\pip install -r requirements.txt
+```
+
+Then **Force ingest** the project so existing folders pick up new `.yaml` / `.env` files.
+
 ## Scripts
 
 | Script | Role |

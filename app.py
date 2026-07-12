@@ -273,11 +273,13 @@ def _sidebar() -> None:
     st.sidebar.caption(
         "Supported: " + ", ".join(sorted(SUPPORTED_EXTENSIONS))
     )
+    upload_types = sorted({ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS} | {"yml", "yaml", "env"})
     uploads = st.sidebar.file_uploader(
         "Upload project files",
-        type=[ext.lstrip(".") for ext in sorted(SUPPORTED_EXTENSIONS)],
+        type=upload_types,
         accept_multiple_files=True,
         disabled=not bool(tag),
+        help="Includes yaml/yml and env. All files stay on this machine (local Ollama + data/).",
     )
     if uploads and st.sidebar.button("Upload & ingest", use_container_width=True, disabled=not bool(tag)):
         log_lines: list[str] = []
@@ -372,6 +374,12 @@ def _sidebar() -> None:
 def _main_search() -> None:
     _render_header()
 
+    # Clear Search sets a flag then reruns; mutate widget state only *before*
+    # the text_area with key="search_query" is created.
+    if st.session_state.pop("_clear_search", False):
+        st.session_state.search_query = ""
+        st.session_state.search_result = None
+
     projects = _refresh_projects()
     filter_options = ["All projects"] + projects
 
@@ -392,11 +400,20 @@ def _main_search() -> None:
         "Search project docs",
         placeholder="e.g. How do I configure the authentication middleware?",
         height=100,
+        key="search_query",
     )
-    search_clicked = st.button("Search", type="primary", use_container_width=False)
+    btn_search, btn_clear, _ = st.columns([1, 1, 4])
+    with btn_search:
+        search_clicked = st.button("Search", type="primary", use_container_width=True)
+    with btn_clear:
+        clear_clicked = st.button("Clear Search", use_container_width=True)
+
+    if clear_clicked:
+        st.session_state._clear_search = True
+        st.rerun()
 
     if search_clicked:
-        if not query.strip():
+        if not (query or "").strip():
             st.warning("Enter a search question.")
         elif n == 0:
             st.warning("Nothing indexed yet. Add sources and ingest from the sidebar.")

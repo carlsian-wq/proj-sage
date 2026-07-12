@@ -23,7 +23,7 @@ CHUNK_OVERLAP = 200
 # Retrieval
 TOP_K = 6
 
-# Supported source extensions
+# Supported source extensions (all processed locally only — see loaders / README)
 SUPPORTED_EXTENSIONS = {
     ".txt",
     ".md",
@@ -31,8 +31,22 @@ SUPPORTED_EXTENSIONS = {
     ".pdf",
     ".csv",
     ".json",
+    ".yaml",
+    ".yml",
+    ".env",
     ".doc",
     ".docx",
+}
+
+# Dotfile env variants (Path.suffix is empty for a file named exactly ".env")
+ENV_FILE_NAMES = {
+    ".env",
+}
+
+# Treat as sensitive: kept on-disk under data/ only; never sent to external APIs
+# (Ollama + Chroma stay on localhost).
+SENSITIVE_EXTENSIONS = {
+    ".env",
 }
 
 # Directories to skip when walking local project folders
