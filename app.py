@@ -139,16 +139,22 @@ def _render_sources_panel(tag: str) -> None:
             st.markdown(f"**{kind}** · `{label}`  \nFiles: {count} · Last ingest: `{last}`")
         with col_b:
             if st.button("Ingest", key=f"ingest_src_{src['id']}", use_container_width=True):
-                with st.spinner("Ingesting source…"):
-                    log_lines: list[str] = []
+                log_lines: list[str] = []
+                progress_slot = st.empty()
+
+                def _progress(msg: str) -> None:
+                    log_lines.append(msg)
+                    progress_slot.caption(msg)
+
+                with st.spinner("Ingesting changed files…"):
                     report = ingest_source(
                         tag,
                         src,
-                        force=True,
-                        progress=lambda m: log_lines.append(m),
+                        force=False,
+                        progress=_progress,
                     )
                     st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
-                st.success("Source re-ingested.")
+                st.success("Source ingest complete.")
                 st.rerun()
         with col_c:
             if st.button("Remove", key=f"rm_src_{src['id']}", use_container_width=True):
@@ -336,20 +342,36 @@ def _sidebar() -> None:
         if st.button(
             "This project",
             use_container_width=True,
-            help="Re-ingest all sources under the active tag",
+            help="Re-embed every file under the active tag (slow on large repos)",
             disabled=not bool(tag),
         ):
-            with st.spinner(f"Ingesting project “{tag}”…"):
-                log_lines = []
-                report = ingest_project(tag, force=True, progress=lambda m: log_lines.append(m))
+            log_lines: list[str] = []
+            progress_slot = st.sidebar.empty()
+
+            def _progress(msg: str) -> None:
+                log_lines.append(msg)
+                progress_slot.caption(msg[:120])
+
+            with st.spinner(f"Force ingesting “{tag}”…"):
+                report = ingest_project(tag, force=True, progress=_progress)
                 st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
             st.sidebar.success("Project ingest complete.")
             st.rerun()
     with c2:
-        if st.button("All projects", use_container_width=True, help="Re-ingest every registered source"):
-            with st.spinner("Ingesting all projects…"):
-                log_lines = []
-                report = ingest_all(force=True, progress=lambda m: log_lines.append(m))
+        if st.button(
+            "All projects",
+            use_container_width=True,
+            help="Re-embed every registered source (slowest)",
+        ):
+            log_lines = []
+            progress_slot = st.sidebar.empty()
+
+            def _progress_all(msg: str) -> None:
+                log_lines.append(msg)
+                progress_slot.caption(msg[:120])
+
+            with st.spinner("Force ingesting all projects…"):
+                report = ingest_all(force=True, progress=_progress_all)
                 st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
             st.sidebar.success("Full ingest complete.")
             st.rerun()

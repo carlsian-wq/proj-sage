@@ -75,6 +75,8 @@ SKIP_DIR_NAMES = {
     "chroma",
     ".chroma",
     "logs",  # runtime logs (can be huge; re-index docs not log tails)
+    "backtest_results",  # hyperliquid-bot: hundreds of CSV/JSON run artifacts
+    "archive",  # old code snapshots — not active docs
 }
 
 

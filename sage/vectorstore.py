@@ -23,6 +23,39 @@ class ChromaIndexError(RuntimeError):
     """Raised when the on-disk HNSW index is unreadable (common after OneDrive sync races)."""
 
 
+def _stale_lock_owner() -> int | None:
+    """Return PID from lock file if present."""
+    try:
+        raw = _WRITE_LOCK.read_text(encoding="utf-8").strip()
+        return int(raw) if raw.isdigit() else None
+    except OSError:
+        return None
+
+
+def _process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _clear_stale_write_lock() -> bool:
+    """Remove lock left by a crashed ingest. Returns True if a stale lock was cleared."""
+    if not _WRITE_LOCK.exists():
+        return False
+    owner = _stale_lock_owner()
+    if owner is None or not _process_alive(owner):
+        try:
+            _WRITE_LOCK.unlink(missing_ok=True)
+            return True
+        except OSError:
+            pass
+    return False
+
+
 @contextmanager
 def _write_lock() -> Iterator[None]:
     """Exclusive lock so CLI ingest and Streamlit do not corrupt Chroma concurrently."""
@@ -36,6 +69,7 @@ def _write_lock() -> Iterator[None]:
             fh.flush()
             break
         except FileExistsError:
+            _clear_stale_write_lock()
             time.sleep(0.5)
     else:
         raise TimeoutError(

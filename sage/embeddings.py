@@ -8,37 +8,47 @@ import ollama
 
 from sage.config import EMBED_MODEL, OLLAMA_HOST
 
+# Ollama accepts batched input; one round-trip per batch is much faster than per-chunk.
+EMBED_BATCH_SIZE = 32
+
 
 def get_client() -> ollama.Client:
     return ollama.Client(host=OLLAMA_HOST)
 
 
+def _extract_embeddings(resp) -> list[list[float]]:
+    emb = getattr(resp, "embeddings", None)
+    if emb is None and isinstance(resp, dict):
+        emb = resp.get("embeddings")
+    if emb is not None:
+        return [list(v) for v in emb]
+    single = getattr(resp, "embedding", None) or (
+        resp.get("embedding") if isinstance(resp, dict) else None
+    )
+    if single is not None:
+        return [list(single)]
+    raise RuntimeError(f"Unexpected embed response shape: {resp!r}")
+
+
 def embed_texts(texts: Sequence[str], *, model: str = EMBED_MODEL) -> list[list[float]]:
-    """Embed a batch of texts. Returns one vector per input string."""
+    """Embed texts via Ollama. Batches requests for throughput."""
     if not texts:
         return []
     client = get_client()
-    vectors: list[list[float]] = []
-    # nomic via ollama embed API — one call per text is reliable across versions
+    cleaned: list[str] = []
     for text in texts:
-        cleaned = text.replace("\x00", " ").strip()
-        if not cleaned:
-            cleaned = " "
-        resp = client.embed(model=model, input=cleaned)
-        # ollama python SDK: resp.embeddings is list[list[float]] for batch input
-        emb = getattr(resp, "embeddings", None)
-        if emb is None and isinstance(resp, dict):
-            emb = resp.get("embeddings")
-        if emb and isinstance(emb[0], (list, tuple)):
-            vectors.append(list(emb[0]))
-        elif emb:
-            vectors.append(list(emb))
-        else:
-            # older shape: embedding singular
-            single = getattr(resp, "embedding", None) or (resp.get("embedding") if isinstance(resp, dict) else None)
-            if single is None:
-                raise RuntimeError(f"Unexpected embed response shape: {resp!r}")
-            vectors.append(list(single))
+        c = text.replace("\x00", " ").strip()
+        cleaned.append(c if c else " ")
+
+    vectors: list[list[float]] = []
+    for start in range(0, len(cleaned), EMBED_BATCH_SIZE):
+        batch = cleaned[start : start + EMBED_BATCH_SIZE]
+        resp = client.embed(model=model, input=batch)
+        vectors.extend(_extract_embeddings(resp))
+    if len(vectors) != len(cleaned):
+        raise RuntimeError(
+            f"Embedding count mismatch: got {len(vectors)} for {len(cleaned)} inputs"
+        )
     return vectors
 
 

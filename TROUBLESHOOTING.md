@@ -102,6 +102,38 @@ The on-disk config is correct; the **old Streamlit process** was still in memory
 
 ---
 
+## Force ingest spins for hours (hyperliquid-bot)
+
+**Cause:** Force ingest re-embeds **every** supported file through local Ollama, even if unchanged. `hyperliquid-bot` had **~250 files** indexed — mostly `backtest_results/*.csv` and `*.json` run artifacts (~1,300+ embedding chunks). That can take **30–90+ minutes** on CPU Ollama with little search value.
+
+**Fix (after pulling latest Project Sage):**
+
+1. `backtest_results/` and `archive/` are now **skipped** during folder walks (~22 doc files, ~80 chunks for hyperliquid-bot).
+2. Embeddings are **batched** (32 chunks per Ollama call) instead of one call per chunk.
+3. Stale `data/chroma/.write.lock` from a crashed ingest is auto-cleared when the owning PID is gone.
+
+**What to use instead of Force ingest**
+
+| Goal | Action |
+|------|--------|
+| Pick up edited `TROUBLESHOOTING.md`, `WEBHOOKS.md`, etc. | Sidebar **Ingest** on the hyperliquid-bot source (incremental — unchanged files skipped) |
+| Watcher missed a OneDrive sync | Same — per-source **Ingest**, or wait for the 2‑min poll scan |
+| Full rebuild after Chroma corruption | `rebuild_chroma.py`, then **Force ingest → This project** once |
+
+**While a long Force ingest runs:** expand **Last ingest log** in the sidebar — filenames should advance. If the caption is frozen for 10+ minutes, check Ollama (`http://127.0.0.1:11434`) and remove a stale lock only if ingest is not running:
+
+```powershell
+cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+Get-Content data\chroma\.write.lock   # PID holding the lock
+.\scripts\stop_project_sage.ps1       # if you need to abort
+Remove-Item data\chroma\.write.lock -ErrorAction SilentlyContinue
+.\scripts\start_streamlit.ps1
+```
+
+**Rule:** Prefer per-source **Ingest** for doc updates. Reserve **Force ingest** for rare full rebuilds.
+
+---
+
 ## Folder watcher / Last ingest not updating
 
 The watcher runs **inside** the Streamlit process — not as a Windows service.
