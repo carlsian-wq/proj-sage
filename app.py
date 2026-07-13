@@ -22,6 +22,7 @@ from sage.config import (
     ensure_data_dirs,
 )
 from sage import vectorstore
+from sage.vectorstore import ChromaIndexError
 from sage.ingest import ingest_all, ingest_project, ingest_source, save_upload
 from sage.rag import search_and_answer
 from sage.registry import (
@@ -33,6 +34,7 @@ from sage.registry import (
     list_projects,
     remove_source,
 )
+from sage.settings import load_settings, update_settings
 from sage.watcher import get_watcher
 
 # Prefer helpers from registry; keep local fallbacks so a partial OneDrive
@@ -86,6 +88,22 @@ def _render_header() -> None:
     st.divider()
 
 
+def _sync_watcher_status() -> None:
+    """Reflect the real in-process watcher state (survives Streamlit reruns)."""
+    w = get_watcher()
+    st.session_state.watcher_status = w.status_message() if w.running else "Stopped"
+
+
+def _maybe_auto_start_watcher() -> None:
+    if not load_settings().get("watcher_auto_start"):
+        return
+    w = get_watcher(on_event=lambda m: None)
+    if not w.running:
+        st.session_state.watcher_status = w.start()
+    else:
+        _sync_watcher_status()
+
+
 def _init_state() -> None:
     defaults = {
         "selected_tag": None,
@@ -96,6 +114,9 @@ def _init_state() -> None:
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+    _maybe_auto_start_watcher()
+    if get_watcher().running:
+        _sync_watcher_status()
 
 
 def _refresh_projects() -> list[str]:
@@ -270,16 +291,15 @@ def _sidebar() -> None:
     st.sidebar.subheader(f"Uploads · {tag or 'select a project'}")
 
     # File upload (requires an active project)
-    st.sidebar.caption(
-        "Supported: " + ", ".join(sorted(SUPPORTED_EXTENSIONS))
-    )
+    display_exts = sorted(ext for ext in SUPPORTED_EXTENSIONS if ext != ".log")
+    st.sidebar.caption("Supported: " + ", ".join(display_exts))
     upload_types = sorted({ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS} | {"yml", "yaml", "env"})
     uploads = st.sidebar.file_uploader(
         "Upload project files",
         type=upload_types,
         accept_multiple_files=True,
         disabled=not bool(tag),
-        help="Includes yaml/yml, env, and log. All files stay on this machine (local Ollama + data/).",
+        help="Includes yaml/yml and env. All files stay on this machine (local Ollama + data/).",
     )
     if uploads and st.sidebar.button("Upload & ingest", use_container_width=True, disabled=not bool(tag)):
         log_lines: list[str] = []
@@ -336,8 +356,24 @@ def _sidebar() -> None:
 
     st.sidebar.divider()
     st.sidebar.subheader("Folder watcher")
+    _sync_watcher_status()
     st.sidebar.caption(st.session_state.watcher_status)
-    wc1, wc2 = st.sidebar.columns(2)
+    if sys.platform == "win32":
+        st.sidebar.caption(
+            "On Windows/OneDrive, uses a polling observer plus a periodic scan "
+            "so cloud-synced edits are still picked up."
+        )
+    auto_start = st.sidebar.checkbox(
+        "Auto-start watcher on launch",
+        value=bool(load_settings().get("watcher_auto_start")),
+        help="Restarts the watcher when you open Project Sage (Streamlit must stay running).",
+    )
+    if auto_start != bool(load_settings().get("watcher_auto_start")):
+        update_settings(watcher_auto_start=auto_start)
+        if auto_start and not get_watcher().running:
+            st.session_state.watcher_status = get_watcher(on_event=lambda m: None).start()
+        st.rerun()
+    wc1, wc2, wc3 = st.sidebar.columns(3)
     with wc1:
         if st.button("Start", use_container_width=True):
             msg = get_watcher(on_event=lambda m: None).start()
@@ -346,6 +382,11 @@ def _sidebar() -> None:
     with wc2:
         if st.button("Stop", use_container_width=True):
             msg = get_watcher().stop()
+            st.session_state.watcher_status = msg
+            st.rerun()
+    with wc3:
+        if st.button("Restart", use_container_width=True):
+            msg = get_watcher(on_event=lambda m: None).restart()
             st.session_state.watcher_status = msg
             st.rerun()
 
@@ -391,10 +432,14 @@ def _main_search() -> None:
             help="Limit retrieval to one project, or search across all.",
         )
     with col_stats:
-        n = vectorstore.count_chunks(
-            None if tag_filter == "All projects" else tag_filter
-        )
-        st.metric("Indexed chunks", n)
+        try:
+            n = vectorstore.count_chunks(
+                None if tag_filter == "All projects" else tag_filter
+            )
+            st.metric("Indexed chunks", n)
+        except ChromaIndexError as e:
+            st.metric("Indexed chunks", "—")
+            st.error(str(e))
 
     query = st.text_area(
         "Search project docs",

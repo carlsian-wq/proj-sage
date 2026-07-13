@@ -32,7 +32,6 @@ SUPPORTED_EXTENSIONS = {
     ".txt",
     ".md",
     ".markdown",
-    ".log",
     ".pdf",
     ".csv",
     ".json",
@@ -75,6 +74,7 @@ SKIP_DIR_NAMES = {
     "data",  # avoid re-ingesting Sage's own data if nested
     "chroma",
     ".chroma",
+    "logs",  # runtime logs (can be huge; re-index docs not log tails)
 }
 
 

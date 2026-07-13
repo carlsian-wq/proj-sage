@@ -7,7 +7,7 @@ Local **RAG search agent** for coding project documentation.
 - **Embeddings:** Ollama `nomic-embed-text`  
 - **Vector store:** Chroma (on disk under `data/`)
 
-Tag projects, point at local folders or upload files (`txt`, `md`, `log`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
+Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 | **Project Sage** | Start server if needed → open as desktop web app (`--app=http://localhost:8504`) |
 | **Project Sage Streamlit** | Streamlit console only |
 
-Details: [STARTUP.md](STARTUP.md).
+Details: [STARTUP.md](STARTUP.md). Problems: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) (`show_running.ps1 -Details` for PID chains).
 
 ### CLI
 
@@ -62,8 +62,9 @@ Open the URL Streamlit prints (usually http://localhost:8504).
    - You can edit the tag before clicking *Add folder source*, or check *Attach to active project instead* to reuse the active tag.
 2. **Or create a tag first** with *Create project tag*, then upload files under the active project.
 3. Ingest runs automatically on add; use **Force ingest** if you need a full rebuild.
-4. Optionally **Start** the folder watcher so edits on disk re-embed automatically.
-5. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**. Use **Clear Search** next to Search to reset the query and results.
+4. **Folder watcher** — enable **Auto-start watcher on launch** (recommended), or click **Start** each session. On Windows/OneDrive it uses a polling observer plus a background scan every 2 minutes so cloud-synced edits are picked up even when native file events are missed.
+5. **Last ingest** in the sources panel updates after full **Ingest** / **Force ingest**, and also after the watcher auto-ingests changed files.
+6. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**. Use **Clear Search** next to Search to reset the query and results.
 
 > **Note:** Tags only appear in filter dropdowns after they exist in the registry. Adding a folder creates the tag; merely embedding under another active project (old behavior) did not.
 
@@ -79,6 +80,7 @@ Open the URL Streamlit prints (usually http://localhost:8504).
 ```
 data/
   registry.json     # project tags + source metadata
+  settings.json     # watcher auto-start + poll interval
   chroma/           # vector index
   uploads/          # files uploaded via the UI
   launcher.log      # desktop launcher events
@@ -97,7 +99,7 @@ Everything stays on your machine. `data/` is gitignored.
 
 | Format | Notes |
 |--------|--------|
-| `.txt`, `.md`, `.log` | Plain text (logs decoded as UTF-8 / common fallbacks) |
+| `.txt`, `.md` | Plain text |
 | `.pdf`, `.csv`, `.json` | Extracted / pretty-printed locally |
 | `.yaml`, `.yml` | Parsed with **PyYAML `safe_load`** (no code execution) |
 | `.env`, `.env.*`, `*.env` | Parsed as dotenv key/value text for local search |
@@ -124,6 +126,7 @@ scripts/
   install_desktop_shortcuts.ps1
   launch_project_sage.vbs
 STARTUP.md             # desktop / launcher guide
+TROUBLESHOOTING.md     # show_running, ports, Chroma, shortcuts
 sage/
   config.py            # models, paths, extensions
   registry.py          # project/source registry
@@ -133,7 +136,8 @@ sage/
   vectorstore.py       # Chroma
   ingest.py            # hash-aware ingest pipeline
   rag.py               # retrieve + answer
-  watcher.py           # folder auto-ingest
+  settings.py          # persisted watcher preferences
+  watcher.py           # folder auto-ingest (polling + periodic scan on Windows)
 ```
 
 ## Documentation policy

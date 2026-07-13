@@ -57,7 +57,8 @@ function New-SageShortcut {
     $sc = $shell.CreateShortcut($path)
     $sc.TargetPath = $PowerShellExe
     # Do not use $args — it is a PowerShell automatic variable.
-    $argLine = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
+    # -NoExit keeps the console visible (Streamlit server or launcher messages).
+    $argLine = "-NoExit -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
     if ($ExtraArgs) {
         $argLine = "$argLine $ExtraArgs"
     }

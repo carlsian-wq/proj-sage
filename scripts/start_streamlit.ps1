@@ -30,8 +30,14 @@ function Test-ServerUp([string]$BaseUrl) {
 }
 
 if (Test-ServerUp $Url) {
-    Write-Host "Project Sage is already running at $Url"
-    Write-Host "Close the existing Streamlit console if you want to restart."
+    Write-Host "Project Sage is already running at $Url" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  show_running:  .\scripts\show_running.ps1"
+    Write-Host "  stop server:   .\scripts\stop_project_sage.ps1"
+    Write-Host ""
+    Write-Host "This window stays open so you can read the message."
+    Write-Host "Press Enter to close (server keeps running)."
+    Read-Host
     exit 0
 }
 

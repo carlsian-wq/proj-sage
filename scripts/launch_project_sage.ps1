@@ -114,13 +114,15 @@ $alreadyRunning = Test-ServerUp $Url
 
 if (-not $alreadyRunning) {
     Write-LauncherLog "Starting Streamlit on port $Port"
-    $streamlitCmd = "& '$Streamlit' run app.py --server.port $Port --server.headless true"
+    $serverScript = Join-Path $ProjectRoot "scripts\start_streamlit.ps1"
     Start-Process -FilePath "powershell.exe" -ArgumentList @(
         "-NoExit",
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
-        "-Command",
-        "Set-Location -LiteralPath '$ProjectRoot'; Write-Host 'Project Sage Streamlit server (port $Port). Close this window to stop the server.'; $streamlitCmd"
+        "-File",
+        $serverScript,
+        "-Port",
+        "$Port"
     ) -WorkingDirectory $ProjectRoot
     if (-not (Wait-ForServer $Url)) {
         $msg = "Project Sage did not start within 60 seconds. Check the Streamlit console for errors."

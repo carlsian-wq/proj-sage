@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Any
+import os
+import time
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 import chromadb
 from chromadb.config import Settings
@@ -12,6 +15,42 @@ from sage.config import CHROMA_DIR, ensure_data_dirs
 from sage.embeddings import embed_query, embed_texts
 
 COLLECTION_NAME = "project_sage_docs"
+_WRITE_LOCK = CHROMA_DIR / ".write.lock"
+_LOCK_TIMEOUT_S = 600
+
+
+class ChromaIndexError(RuntimeError):
+    """Raised when the on-disk HNSW index is unreadable (common after OneDrive sync races)."""
+
+
+@contextmanager
+def _write_lock() -> Iterator[None]:
+    """Exclusive lock so CLI ingest and Streamlit do not corrupt Chroma concurrently."""
+    ensure_data_dirs()
+    deadline = time.time() + _LOCK_TIMEOUT_S
+    fh = None
+    while time.time() < deadline:
+        try:
+            fh = open(_WRITE_LOCK, "x", encoding="utf-8")
+            fh.write(str(os.getpid()))
+            fh.flush()
+            break
+        except FileExistsError:
+            time.sleep(0.5)
+    else:
+        raise TimeoutError(
+            "Chroma is busy (another ingest or rebuild is running). "
+            "Stop Project Sage or wait for the other job to finish."
+        )
+    try:
+        yield
+    finally:
+        if fh:
+            fh.close()
+        try:
+            _WRITE_LOCK.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _client() -> chromadb.PersistentClient:
@@ -20,6 +59,16 @@ def _client() -> chromadb.PersistentClient:
         path=str(CHROMA_DIR),
         settings=Settings(anonymized_telemetry=False),
     )
+
+
+def _wrap_chroma_err(exc: Exception) -> Exception:
+    msg = str(exc).lower()
+    if "hnsw" in msg or "compactor" in msg or "segment reader" in msg:
+        return ChromaIndexError(
+            "Chroma vector index is corrupted. Close Project Sage, then run: "
+            r".venv\Scripts\python.exe scripts\rebuild_chroma.py"
+        )
+    return exc
 
 
 def get_collection():
@@ -42,43 +91,47 @@ def make_file_id(project_tag: str, source_path: str) -> str:
 
 def delete_by_source_path(project_tag: str, source_path: str) -> int:
     """Remove all chunks for a given file under a project tag. Returns deleted count estimate."""
-    col = get_collection()
-    file_key = make_file_id(project_tag, source_path)
-    try:
-        existing = col.get(where={"file_key": file_key})
-        ids = existing.get("ids") or []
-        if ids:
-            col.delete(ids=ids)
-        return len(ids)
-    except Exception:
-        # Fallback: filter by path + tag
+    with _write_lock():
+        col = get_collection()
+        file_key = make_file_id(project_tag, source_path)
         try:
-            existing = col.get(
-                where={
-                    "$and": [
-                        {"project_tag": project_tag},
-                        {"source_path": source_path},
-                    ]
-                }
-            )
+            existing = col.get(where={"file_key": file_key})
             ids = existing.get("ids") or []
             if ids:
                 col.delete(ids=ids)
             return len(ids)
-        except Exception:
-            return 0
+        except Exception as e:
+            wrapped = _wrap_chroma_err(e)
+            if isinstance(wrapped, ChromaIndexError):
+                raise wrapped
+            try:
+                existing = col.get(
+                    where={
+                        "$and": [
+                            {"project_tag": project_tag},
+                            {"source_path": source_path},
+                        ]
+                    }
+                )
+                ids = existing.get("ids") or []
+                if ids:
+                    col.delete(ids=ids)
+                return len(ids)
+            except Exception as e2:
+                raise _wrap_chroma_err(e2) from e2
 
 
 def delete_project(project_tag: str) -> int:
-    col = get_collection()
-    try:
-        existing = col.get(where={"project_tag": project_tag})
-        ids = existing.get("ids") or []
-        if ids:
-            col.delete(ids=ids)
-        return len(ids)
-    except Exception:
-        return 0
+    with _write_lock():
+        col = get_collection()
+        try:
+            existing = col.get(where={"project_tag": project_tag})
+            ids = existing.get("ids") or []
+            if ids:
+                col.delete(ids=ids)
+            return len(ids)
+        except Exception as e:
+            raise _wrap_chroma_err(e) from e
 
 
 def upsert_chunks(
@@ -91,39 +144,49 @@ def upsert_chunks(
     chunks: list[str],
 ) -> int:
     """Replace all chunks for a file with new embeddings. Returns chunk count."""
-    delete_by_source_path(project_tag, source_path)
-    if not chunks:
-        return 0
+    with _write_lock():
+        col = get_collection()
+        file_key = make_file_id(project_tag, source_path)
+        try:
+            existing = col.get(where={"file_key": file_key})
+            ids = existing.get("ids") or []
+            if ids:
+                col.delete(ids=ids)
+        except Exception as e:
+            raise _wrap_chroma_err(e) from e
 
-    col = get_collection()
-    file_key = make_file_id(project_tag, source_path)
-    ids = [make_chunk_id(project_tag, source_path, i) for i in range(len(chunks))]
-    embeddings = embed_texts(chunks)
-    metadatas: list[dict[str, Any]] = []
-    for i, _ in enumerate(chunks):
-        metadatas.append(
-            {
-                "project_tag": project_tag,
-                "source_path": source_path,
-                "source_id": source_id,
-                "file_key": file_key,
-                "file_hash": file_hash,
-                "mtime": float(mtime),
-                "chunk_index": i,
-            }
-        )
+        if not chunks:
+            return 0
 
-    # Chroma batch limits — keep batches modest
-    batch = 32
-    for start in range(0, len(chunks), batch):
-        end = start + batch
-        col.upsert(
-            ids=ids[start:end],
-            embeddings=embeddings[start:end],
-            documents=chunks[start:end],
-            metadatas=metadatas[start:end],
-        )
-    return len(chunks)
+        ids = [make_chunk_id(project_tag, source_path, i) for i in range(len(chunks))]
+        embeddings = embed_texts(chunks)
+        metadatas: list[dict[str, Any]] = []
+        for i, _ in enumerate(chunks):
+            metadatas.append(
+                {
+                    "project_tag": project_tag,
+                    "source_path": source_path,
+                    "source_id": source_id,
+                    "file_key": file_key,
+                    "file_hash": file_hash,
+                    "mtime": float(mtime),
+                    "chunk_index": i,
+                }
+            )
+
+        batch = 32
+        try:
+            for start in range(0, len(chunks), batch):
+                end = start + batch
+                col.upsert(
+                    ids=ids[start:end],
+                    embeddings=embeddings[start:end],
+                    documents=chunks[start:end],
+                    metadatas=metadatas[start:end],
+                )
+        except Exception as e:
+            raise _wrap_chroma_err(e) from e
+        return len(chunks)
 
 
 def query(
@@ -134,19 +197,26 @@ def query(
 ) -> list[dict[str, Any]]:
     """Semantic search. project_tag=None means all projects."""
     col = get_collection()
-    if col.count() == 0:
+    try:
+        total = col.count()
+    except Exception as e:
+        raise _wrap_chroma_err(e) from e
+    if total == 0:
         return []
 
     qvec = embed_query(query_text)
     kwargs: dict[str, Any] = {
         "query_embeddings": [qvec],
-        "n_results": min(top_k, max(col.count(), 1)),
+        "n_results": min(top_k, max(total, 1)),
         "include": ["documents", "metadatas", "distances"],
     }
     if project_tag and project_tag != "All projects":
         kwargs["where"] = {"project_tag": project_tag}
 
-    result = col.query(**kwargs)
+    try:
+        result = col.query(**kwargs)
+    except Exception as e:
+        raise _wrap_chroma_err(e) from e
     docs = (result.get("documents") or [[]])[0]
     metas = (result.get("metadatas") or [[]])[0]
     dists = (result.get("distances") or [[]])[0]
@@ -156,9 +226,7 @@ def query(
     for i, doc in enumerate(docs):
         meta = metas[i] if i < len(metas) else {}
         dist = dists[i] if i < len(dists) else None
-        # cosine distance -> rough similarity
         score = None if dist is None else max(0.0, 1.0 - float(dist))
-        # Chroma sometimes yields None documents; keep str for UI/RAG formatters
         text = "" if doc is None else str(doc)
         hits.append(
             {
@@ -173,10 +241,10 @@ def query(
 
 def count_chunks(project_tag: str | None = None) -> int:
     col = get_collection()
-    if not project_tag or project_tag == "All projects":
-        return col.count()
     try:
+        if not project_tag or project_tag == "All projects":
+            return col.count()
         res = col.get(where={"project_tag": project_tag})
         return len(res.get("ids") or [])
-    except Exception:
-        return 0
+    except Exception as e:
+        raise _wrap_chroma_err(e) from e
