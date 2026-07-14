@@ -165,6 +165,25 @@ def _render_sources_panel(tag: str) -> None:
                 st.rerun()
 
 
+def _apply_pending_selected_tag(projects: list[str]) -> None:
+    """Apply deferred Active-project changes *before* the selectbox is created.
+
+    selected_tag is bound with key= on the selectbox; Streamlit forbids writing
+    that key after the widget exists on the same run.
+    """
+    if "_pending_selected_tag" not in st.session_state:
+        return
+    pending = st.session_state.pop("_pending_selected_tag")
+    if pending is None:
+        # Drop key so the next selectbox run re-defaults cleanly.
+        st.session_state.pop("selected_tag", None)
+    elif projects and pending in projects:
+        st.session_state.selected_tag = pending
+    elif pending:
+        # Tag may have just been created; keep it if projects not refreshed yet.
+        st.session_state.selected_tag = pending
+
+
 def _sidebar() -> None:
     if LOGO_PATH.is_file():
         st.sidebar.image(str(LOGO_PATH), width=96)
@@ -172,6 +191,7 @@ def _sidebar() -> None:
     st.sidebar.caption(f"LLM: `{LLM_MODEL}` · Embed: `{EMBED_MODEL}`")
 
     projects = _refresh_projects()
+    _apply_pending_selected_tag(projects)
 
     st.sidebar.subheader("Project tags")
     new_tag = st.sidebar.text_input(
@@ -183,27 +203,31 @@ def _sidebar() -> None:
         tag_name = normalize_tag(new_tag or "")
         if tag_name:
             ensure_project(tag_name)
-            st.session_state.selected_tag = tag_name
+            # Selectbox may already exist this run; defer assignment to next run.
+            st.session_state._pending_selected_tag = tag_name
             st.sidebar.success(f"Project “{tag_name}” ready.")
             st.rerun()
         else:
             st.sidebar.warning("Enter a project name tag.")
 
     if projects:
-        selected = st.sidebar.selectbox(
+        # Bind via key only — do NOT pass index= each run. In Streamlit 1.59+,
+        # index is part of the widget element id, so changing it on every
+        # selection creates a new widget, desyncs the frontend, and can kill
+        # the server session with no useful traceback.
+        if st.session_state.get("selected_tag") not in projects:
+            st.session_state.selected_tag = projects[0]
+        st.sidebar.selectbox(
             "Active project",
             options=projects,
-            index=projects.index(st.session_state.selected_tag)
-            if st.session_state.selected_tag in projects
-            else 0,
+            key="selected_tag",
             help="Used for uploads, force-ingest, and sources list. Folder add uses its own tag field.",
         )
-        st.session_state.selected_tag = selected
     else:
         st.sidebar.info("Add a local folder below (tag is created from the folder name), or create a tag first.")
-        st.session_state.selected_tag = None
+        st.session_state.pop("selected_tag", None)
 
-    tag = st.session_state.selected_tag
+    tag = st.session_state.get("selected_tag")
 
     st.sidebar.divider()
     st.sidebar.subheader("Add local folder")
@@ -237,9 +261,10 @@ def _sidebar() -> None:
 
     use_active = False
     if tag:
+        # Stable key + label: avoid widget-id thrash when active tag changes.
         use_active = st.sidebar.checkbox(
             f"Attach to active project instead ({tag})",
-            value=False,
+            key="attach_to_active_project",
             help="When checked, the folder is stored under the Active project tag above.",
         )
 
@@ -282,7 +307,7 @@ def _sidebar() -> None:
                                 + "\n\n"
                                 + report.summary()
                             )
-                    st.session_state.selected_tag = target_tag
+                    st.session_state._pending_selected_tag = target_tag
                     st.sidebar.success(
                         f"Folder added under project tag “{target_tag}” (now in filter dropdowns)."
                     )
@@ -426,7 +451,7 @@ def _sidebar() -> None:
         ):
             vectorstore.delete_project(tag)
             delete_project(tag)
-            st.session_state.selected_tag = None
+            st.session_state._pending_selected_tag = None
             st.rerun()
 
     if st.session_state.last_ingest_log:

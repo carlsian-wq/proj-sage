@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import threading
 import time
 from contextlib import contextmanager
 from typing import Any, Iterator
@@ -17,6 +18,12 @@ from sage.embeddings import embed_query, embed_texts
 COLLECTION_NAME = "project_sage_docs"
 _WRITE_LOCK = CHROMA_DIR / ".write.lock"
 _LOCK_TIMEOUT_S = 600
+
+# One PersistentClient per process — multiple clients on the same path race
+# (watcher poll + Streamlit reruns) and can corrupt HNSW or kill the process.
+_client_lock = threading.RLock()
+_chroma_client: chromadb.PersistentClient | None = None
+_chroma_collection = None
 
 
 class ChromaIndexError(RuntimeError):
@@ -87,12 +94,25 @@ def _write_lock() -> Iterator[None]:
             pass
 
 
-def _client() -> chromadb.PersistentClient:
+def _get_client() -> chromadb.PersistentClient:
+    """Return process-wide PersistentClient (create on first use)."""
+    global _chroma_client
     ensure_data_dirs()
-    return chromadb.PersistentClient(
-        path=str(CHROMA_DIR),
-        settings=Settings(anonymized_telemetry=False),
-    )
+    with _client_lock:
+        if _chroma_client is None:
+            _chroma_client = chromadb.PersistentClient(
+                path=str(CHROMA_DIR),
+                settings=Settings(anonymized_telemetry=False),
+            )
+        return _chroma_client
+
+
+def reset_client() -> None:
+    """Drop cached client/collection (e.g. after rebuild_chroma while app is down)."""
+    global _chroma_client, _chroma_collection
+    with _client_lock:
+        _chroma_client = None
+        _chroma_collection = None
 
 
 def _wrap_chroma_err(exc: Exception) -> Exception:
@@ -106,11 +126,16 @@ def _wrap_chroma_err(exc: Exception) -> Exception:
 
 
 def get_collection():
-    client = _client()
-    return client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
-    )
+    """Return the shared collection handle (thread-safe create)."""
+    global _chroma_collection
+    with _client_lock:
+        if _chroma_collection is None:
+            client = _get_client()
+            _chroma_collection = client.get_or_create_collection(
+                name=COLLECTION_NAME,
+                metadata={"hnsw:space": "cosine"},
+            )
+        return _chroma_collection
 
 
 def make_chunk_id(project_tag: str, source_path: str, chunk_index: int) -> str:

@@ -94,6 +94,7 @@ Everything stays on your machine. `data/` is gitignored.
 - Ollama must be reachable at `http://127.0.0.1:11434`.
 - First embed/search can be slow while models load into memory.
 - Default port is **8504** (8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp).
+- **Active project** is bound with a stable Streamlit widget key (do not reintroduce `index=` on that selectbox — it can silently kill the server on Streamlit 1.59+). See [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Supported formats & privacy
 

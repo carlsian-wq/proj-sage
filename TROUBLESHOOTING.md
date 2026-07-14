@@ -180,6 +180,28 @@ Usually: **CLI ingest while Project Sage was open**, or OneDrive syncing `data/c
 
 ---
 
+## Active project dropdown kills Streamlit (silent exit to prompt)
+
+**Symptom:** Changing **Active project** in the sidebar makes the Streamlit console return to the PowerShell prompt with little or no traceback. The browser then shows connection lost.
+
+**Cause (Streamlit 1.59+):** The old code passed a changing `index=` into `st.selectbox` and also copied the value into `session_state`. In current Streamlit, `index` is part of the widget **element id**, so each selection created a *new* widget identity, desynced the frontend, and could tear down the server session. Concurrent Chroma `PersistentClient` instances (UI + folder watcher) made native crashes more likely.
+
+**Fix (current tree):**
+
+- Active project uses a stable `key="selected_tag"` (no per-run `index=`).
+- Deferred tag changes (create / folder add / delete) use `_pending_selected_tag` so the widget key is never written *after* the selectbox is created.
+- Chroma uses one process-wide client/collection.
+
+**What to do:** pull/restart Project Sage (`stop_project_sage.ps1` then **Project Sage Streamlit**). If the console still dies with no Python error, rebuild Chroma once (index corruption can still hard-crash the process):
+
+```powershell
+.\scripts\stop_project_sage.ps1
+.\.venv\Scripts\python.exe scripts\rebuild_chroma.py
+.\scripts\start_streamlit.ps1
+```
+
+---
+
 ## Script reference
 
 | Script | Purpose |
