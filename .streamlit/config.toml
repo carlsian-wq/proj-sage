@@ -4,3 +4,9 @@
 [server]
 port = 8504
 headless = true
+
+[logger]
+level = "info"
+
+[runner]
+fastReruns = true

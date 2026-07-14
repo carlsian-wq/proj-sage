@@ -36,6 +36,7 @@ from sage.registry import (
 )
 from sage.settings import load_settings, update_settings
 from sage.watcher import get_watcher
+from sage.crashlog import install as install_crashlog
 
 # Prefer helpers from registry; keep local fallbacks so a partial OneDrive
 # sync of registry.py cannot crash the page on import.
@@ -64,6 +65,8 @@ st.set_page_config(
 )
 
 ensure_data_dirs()
+install_crashlog()
+vectorstore.ensure_chroma_ready()
 
 
 def _render_header() -> None:
@@ -476,6 +479,7 @@ def _main_search() -> None:
         tag_filter = st.selectbox(
             "Filter by project tag",
             options=filter_options,
+            key="tag_filter",
             help="Limit retrieval to one project, or search across all.",
         )
     with col_stats:
@@ -550,9 +554,14 @@ def _main_search() -> None:
 
 
 def main() -> None:
-    _init_state()
-    _sidebar()
-    _main_search()
+    try:
+        _init_state()
+        _sidebar()
+        _main_search()
+    except Exception as exc:
+        st.error(f"Project Sage error: {exc}")
+        st.exception(exc)
+        raise
 
 
 if __name__ == "__main__":

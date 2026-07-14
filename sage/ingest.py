@@ -66,16 +66,10 @@ def file_sha256(path: Path) -> str:
 
 def _known_file_hash(project_tag: str, source_path: str) -> str | None:
     """Read stored file_hash from any existing chunk metadata."""
-    col = vectorstore.get_collection()
-    file_key = vectorstore.make_file_id(project_tag, source_path)
     try:
-        res = col.get(where={"file_key": file_key}, limit=1, include=["metadatas"])
-        metas = res.get("metadatas") or []
-        if metas and metas[0]:
-            return metas[0].get("file_hash")
+        return vectorstore.get_stored_file_hash(project_tag, source_path)
     except Exception:
-        pass
-    return None
+        return None
 
 
 def ingest_file(

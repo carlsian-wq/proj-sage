@@ -17,9 +17,25 @@ Quick fixes for the Streamlit desktop apps on this PC. For first-time setup and 
 
 ## Status at a glance (start here)
 
+**Command:** `.\scripts\show_running.ps1` — quick health check for all four Streamlit apps on this PC (`:8501`–`:8504`).
+
+**When to use it:**
+
+- Before starting Project Sage — confirm `:8504` is **stopped** (avoid a duplicate server).
+- After starting or restarting — confirm `:8504` shows **RUNNING** and note the PID.
+- Browser says “connection lost” but you are not sure the server died — if `:8504` is **stopped**, the console closed or crashed; if **RUNNING**, refresh the browser or restart the Streamlit console.
+- You suspect duplicate instances (e.g. log-sage “running twice”) — **one row per port**; one `RUNNING` on `:8502` = one Log Sage.
+- Any time you are unsure which dashboard ports are in use.
+
 ```powershell
 cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
 .\scripts\show_running.ps1
+```
+
+More detail (parent PowerShell → streamlit → python PIDs):
+
+```powershell
+.\scripts\show_running.ps1 -Details
 ```
 
 Example output:
@@ -33,15 +49,7 @@ Example output:
   Summary: 3 of 4 apps running
 ```
 
-**One row = one app.** This is the easiest way to answer “is log-sage running twice?” — if `:8502` shows **RUNNING** once, you have **one** Log Sage.
-
-Process chains (powershell → streamlit → python):
-
-```powershell
-.\scripts\show_running.ps1 -Details
-```
-
-Windows uses **3–4 PIDs per Streamlit app**. That is normal, not duplicates.
+**One row = one app.** If `:8502` shows **RUNNING** once, you have **one** Log Sage. Windows may show **3–4 PIDs per app** in `-Details` — that is normal (powershell → streamlit → python), not duplicates.
 
 ---
 
@@ -180,6 +188,43 @@ Usually: **CLI ingest while Project Sage was open**, or OneDrive syncing `data/c
 
 ---
 
+## Streamlit exits with no console error
+
+Silent return to the PowerShell prompt usually means a **native crash** (Chroma HNSW, Ollama, or a Streamlit widget desync) — not a normal Python traceback.
+
+**Check logs (new runs write here):**
+
+| File | What it captures |
+|------|------------------|
+| `data/streamlit.log` | Full Streamlit console output (via `start_streamlit.ps1`) |
+| `data/crash.log` | Uncaught Python exceptions |
+| `data/faulthandler.log` | Segfaults / hard faults (`PYTHONFAULTHANDLER=1`) |
+| `data/launcher.log` | Browser launcher only (not the server) |
+
+```powershell
+cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+Get-Content data\streamlit.log -Tail 40
+Get-Content data\crash.log -Tail 20 -ErrorAction SilentlyContinue
+Get-Content data\faulthandler.log -Tail 20 -ErrorAction SilentlyContinue
+```
+
+**Common causes**
+
+1. **Chroma index corruption** — concurrent ingest + watcher poll, or OneDrive syncing `data/chroma/` mid-write. Fix: `stop_project_sage.ps1` → `rebuild_chroma.py` → restart.
+2. **Active project dropdown** — fixed in current `app.py` (stable `key="selected_tag"`). Restart after pull.
+3. **Watcher auto-ingest during Force ingest** — poll scan and file-watch ingest skip when Chroma write lock is held. All Chroma reads/writes are serialized in-process (UI + watcher threads). Still avoid CLI ingest while the app is open.
+4. **Closing the wrong window** — **Project Sage** shortcut only opens the browser; the server runs in **Project Sage Streamlit**. Closing that console stops :8504 with no error text.
+
+**Restart with logging:**
+
+```powershell
+.\scripts\stop_project_sage.ps1
+.\scripts\start_streamlit.ps1
+.\scripts\show_running.ps1   # confirm :8504 RUNNING
+```
+
+---
+
 ## Active project dropdown kills Streamlit (silent exit to prompt)
 
 **Symptom:** Changing **Active project** in the sidebar makes the Streamlit console return to the PowerShell prompt with little or no traceback. The browser then shows connection lost.
@@ -206,8 +251,8 @@ Usually: **CLI ingest while Project Sage was open**, or OneDrive syncing `data/c
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/show_running.ps1` | Status for :8501–:8504 |
-| `scripts/show_running.ps1 -Details` | PID chains for running apps |
+| `scripts/show_running.ps1` | **First check** — which apps are up on :8501–:8504 (use before/after start, after crashes) |
+| `scripts/show_running.ps1 -Details` | Same, plus PID chains for running apps |
 | `scripts/stop_project_sage.ps1` | Stop Project Sage (:8504) |
 | `scripts/start_streamlit.ps1` | Start Project Sage console |
 | `scripts/rebuild_chroma.py` | Fix corrupted vector index |

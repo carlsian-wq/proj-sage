@@ -18,6 +18,7 @@ else:
     from watchdog.observers import Observer
 
 from sage.ingest import ingest_file
+from sage.vectorstore import is_write_locked
 from sage.loaders import is_env_file, is_supported_file, iter_supported_files
 from sage.registry import get_all_sources, update_source_ingest_meta
 from sage.settings import load_settings
@@ -102,6 +103,10 @@ class _DebouncedHandler(FileSystemEventHandler):
             self._schedule(dest)
 
     def _ingest_path(self, path: str) -> None:
+        if is_write_locked():
+            if self.on_event:
+                self.on_event(f"Auto-ingest deferred — Chroma ingest in progress: {path}")
+            return
         try:
             if self.on_event:
                 self.on_event(f"Auto-ingest: {path}")
@@ -170,6 +175,10 @@ class FolderWatcherService:
 
     def _poll_scan(self) -> None:
         """Fallback for OneDrive/cloud-synced folders that miss FS events."""
+        if is_write_locked():
+            if self.on_event:
+                self.on_event("Poll scan skipped — Chroma ingest in progress")
+            return
         for tag, source in get_all_sources():
             if source.get("type") != "folder":
                 continue
