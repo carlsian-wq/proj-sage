@@ -62,7 +62,7 @@ Open the URL Streamlit prints (usually http://localhost:8504).
    - You can edit the tag before clicking *Add folder source*, or check *Attach to active project instead* to reuse the active tag.
 2. **Or create a tag first** with *Create project tag*, then upload files under the active project.
 3. Ingest runs automatically on add; use **Force ingest** if you need a full rebuild.
-4. **Folder watcher** — enable **Auto-start watcher on launch** (recommended), or click **Start** each session. On Windows/OneDrive it uses a polling observer plus a background scan every 2 minutes so cloud-synced edits are picked up even when native file events are missed.
+4. **Folder watcher** — enable **Auto-start watcher on launch** (recommended), or click **Start** each session. On Windows the default is **poll-only**: every ~2 minutes it walks supported docs only (skips `venv`, `node_modules`, `logs`, …). Full recursive `PollingObserver` is off by default — it was pegging CPU on large OneDrive trees and could kill Streamlit with no error.
 5. **Last ingest** in the sources panel updates after full **Ingest** / **Force ingest**, and also after the watcher auto-ingests changed files.
 6. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**. Use **Clear Search** next to Search to reset the query and results.
 
@@ -80,7 +80,7 @@ Open the URL Streamlit prints (usually http://localhost:8504).
 ```
 data/
   registry.json     # project tags + source metadata
-  settings.json     # watcher auto-start + poll interval
+  settings.json     # watcher auto-start, poll interval, fs observer mode
   chroma/           # vector index
   uploads/          # files uploaded via the UI
   launcher.log      # desktop launcher events
@@ -138,7 +138,7 @@ sage/
   ingest.py            # hash-aware ingest pipeline
   rag.py               # retrieve + answer
   settings.py          # persisted watcher preferences
-  watcher.py           # folder auto-ingest (polling + periodic scan on Windows)
+  watcher.py           # folder auto-ingest (poll-only by default on Windows)
 ```
 
 ## Documentation policy

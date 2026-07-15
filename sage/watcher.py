@@ -7,15 +7,9 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Literal
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
-
-# Windows + OneDrive: native FS events are unreliable; polling observer is safer.
-if sys.platform == "win32":
-    from watchdog.observers.polling import PollingObserver as Observer
-else:
-    from watchdog.observers import Observer
 
 from sage.ingest import ingest_file
 from sage.vectorstore import is_write_locked
@@ -24,6 +18,7 @@ from sage.registry import get_all_sources, update_source_ingest_meta
 from sage.settings import load_settings
 
 ProgressCb = Callable[[str], None]
+ObserverMode = Literal["none", "native", "polling", "auto"]
 
 
 def _utc_now() -> str:
@@ -46,6 +41,36 @@ def _touch_source_meta(project_tag: str, source_id: str) -> None:
         source_id,
         last_ingested_at=_utc_now(),
     )
+
+
+def _resolve_observer_mode(settings: dict) -> ObserverMode:
+    """
+    Resolve FS observer strategy.
+
+    Windows default is **none** (smart poll only). PollingObserver walks *every*
+    file under registered roots — including venv/ — and on large OneDrive trees
+    (~10–20k files per repo) it pegs CPU, spins fans, and can kill Streamlit
+    with no Python traceback.
+    """
+    raw = str(settings.get("watcher_fs_observer", "auto") or "auto").strip().lower()
+    if raw in ("none", "native", "polling"):
+        return raw  # type: ignore[return-value]
+    # auto
+    if sys.platform == "win32":
+        return "none"
+    return "native"
+
+
+def _make_observer(mode: ObserverMode):
+    if mode == "polling":
+        from watchdog.observers.polling import PollingObserver
+
+        return PollingObserver()
+    if mode == "native":
+        from watchdog.observers import Observer
+
+        return Observer()
+    return None
 
 
 class _DebouncedHandler(FileSystemEventHandler):
@@ -143,11 +168,11 @@ class _DebouncedHandler(FileSystemEventHandler):
 
 
 class FolderWatcherService:
-    """Manages watchdog observers for all registered folder sources."""
+    """Manages optional FS observers + a skip-dir-aware poll scan for folder sources."""
 
     def __init__(self, on_event: ProgressCb | None = None):
         self.on_event = on_event
-        self._observer: Observer | None = None
+        self._observer = None
         self._handlers: list[_DebouncedHandler] = []
         self._lock = threading.Lock()
         self._watched_count = 0
@@ -155,10 +180,12 @@ class FolderWatcherService:
         self._poll_stop = threading.Event()
         self._poll_thread: threading.Thread | None = None
         self._poll_scan_s = int(load_settings().get("watcher_poll_scan_s", 120))
+        self._observer_mode: ObserverMode = "none"
+        self._running = False
 
     @property
     def running(self) -> bool:
-        return self._observer is not None and self._observer.is_alive()
+        return self._running
 
     def _note_activity(self) -> None:
         self._last_activity = _utc_now()
@@ -166,15 +193,21 @@ class FolderWatcherService:
     def status_message(self) -> str:
         if not self.running:
             return "Stopped"
-        mode = "polling observer" if sys.platform == "win32" else "native observer"
-        parts = [f"Watching {self._watched_count} folder source(s) ({mode})"]
+        mode = self._observer_mode
+        if mode == "none":
+            obs = "poll-only (skip venv/node_modules)"
+        elif mode == "polling":
+            obs = "polling observer (CPU-heavy)"
+        else:
+            obs = "native FS observer"
+        parts = [f"Watching {self._watched_count} folder source(s) ({obs})"]
         parts.append(f"scan every {self._poll_scan_s}s")
         if self._last_activity:
             parts.append(f"last activity {self._last_activity}")
         return " · ".join(parts)
 
     def _poll_scan(self) -> None:
-        """Fallback for OneDrive/cloud-synced folders that miss FS events."""
+        """Primary change detection: only supported files, skip venv/logs/etc."""
         if is_write_locked():
             if self.on_event:
                 self.on_event("Poll scan skipped — Chroma ingest in progress")
@@ -205,6 +238,10 @@ class FolderWatcherService:
                         self.on_event(f"Poll scan error ({fpath.name}): {e}")
 
     def _poll_loop(self) -> None:
+        # First scan shortly after start so users see activity without waiting full interval
+        if not self._poll_stop.wait(5):
+            if self.running:
+                self._poll_scan()
         while not self._poll_stop.is_set():
             if self._poll_stop.wait(self._poll_scan_s):
                 break
@@ -218,31 +255,38 @@ class FolderWatcherService:
                 return self.status_message()
             settings = load_settings()
             self._poll_scan_s = max(30, int(settings.get("watcher_poll_scan_s", 120)))
+            self._observer_mode = _resolve_observer_mode(settings)
 
-            observer = Observer()
-            handlers: list[_DebouncedHandler] = []
-            watched = 0
-            for tag, source in get_all_sources():
-                if source.get("type") != "folder":
-                    continue
-                path = Path(source["path"])
-                if not path.is_dir():
-                    continue
-                handler = _DebouncedHandler(
-                    tag,
-                    source.get("id", ""),
-                    on_event=self.on_event,
-                    on_activity=self._note_activity,
-                )
-                observer.schedule(handler, str(path), recursive=True)
-                handlers.append(handler)
-                watched += 1
-            if watched == 0:
+            folder_sources = [
+                (tag, source)
+                for tag, source in get_all_sources()
+                if source.get("type") == "folder" and Path(source["path"]).is_dir()
+            ]
+            if not folder_sources:
                 return "No local folders to watch. Add a folder source first."
-            observer.start()
-            self._observer = observer
-            self._handlers = handlers
-            self._watched_count = watched
+
+            handlers: list[_DebouncedHandler] = []
+            observer = _make_observer(self._observer_mode)
+            if observer is not None:
+                for tag, source in folder_sources:
+                    path = Path(source["path"])
+                    handler = _DebouncedHandler(
+                        tag,
+                        source.get("id", ""),
+                        on_event=self.on_event,
+                        on_activity=self._note_activity,
+                    )
+                    observer.schedule(handler, str(path), recursive=True)
+                    handlers.append(handler)
+                observer.start()
+                self._observer = observer
+                self._handlers = handlers
+            else:
+                self._observer = None
+                self._handlers = []
+
+            self._watched_count = len(folder_sources)
+            self._running = True
 
             self._poll_stop.clear()
             self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
@@ -251,14 +295,19 @@ class FolderWatcherService:
 
     def stop(self) -> str:
         with self._lock:
-            if not self._observer:
+            if not self._running:
                 return "Watcher not running."
+            self._running = False
             self._poll_stop.set()
             if self._poll_thread:
                 self._poll_thread.join(timeout=2)
             self._poll_thread = None
-            self._observer.stop()
-            self._observer.join(timeout=5)
+            if self._observer is not None:
+                try:
+                    self._observer.stop()
+                    self._observer.join(timeout=5)
+                except Exception:
+                    pass
             for h in self._handlers:
                 h.stop()
             self._observer = None

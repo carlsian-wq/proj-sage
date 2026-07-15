@@ -410,8 +410,9 @@ def _sidebar() -> None:
     st.sidebar.caption(st.session_state.watcher_status)
     if sys.platform == "win32":
         st.sidebar.caption(
-            "On Windows/OneDrive, uses a polling observer plus a periodic scan "
-            "so cloud-synced edits are still picked up."
+            "Windows default: **poll-only** (scans supported docs every N seconds, "
+            "skips venv/node_modules). Full recursive polling was pegging CPU on large "
+            "repos and could kill Streamlit with no error."
         )
     auto_start = st.sidebar.checkbox(
         "Auto-start watcher on launch",

@@ -94,7 +94,9 @@ Then **Force ingest** the project so existing folders pick up new `.yaml` / `.en
 
 Sidebar → **Folder watcher** → enable **Auto-start watcher on launch** → **Restart**.
 
-Details and fixes: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+Windows default is **poll-only** (supported docs every ~2 min; skips `venv` / `logs` / etc.). Status should say `poll-only`, not `polling observer (CPU-heavy)`.
+
+If Streamlit dies silently with fans spinning hard, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) → *Streamlit exits with no console error*.
 
 ## Scripts
 

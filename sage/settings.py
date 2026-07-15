@@ -15,6 +15,10 @@ _lock = threading.RLock()
 _DEFAULTS: dict[str, Any] = {
     "watcher_auto_start": False,
     "watcher_poll_scan_s": 120,
+    # auto → Windows: poll-only (safe); other OS: native FS observer
+    # none | native | polling | auto
+    # Avoid "polling" on large OneDrive trees — it walks every file under venv/ too.
+    "watcher_fs_observer": "auto",
 }
 
 
