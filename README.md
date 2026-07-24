@@ -7,7 +7,9 @@ Local **RAG search agent** for coding project documentation.
 - **Embeddings:** Ollama `nomic-embed-text`  
 - **Vector store:** Chroma (on disk under `data/`)
 
-Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
+Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `jsonl`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
+
+**Coding notes:** single tag **`coding-notes`** → `log-sage\exports` (`coding-notes.jsonl`). Do not add duplicate tags for the same folder.
 
 ## Requirements
 
@@ -102,6 +104,7 @@ Everything stays on your machine. `data/` is gitignored.
 |--------|--------|
 | `.txt`, `.md` | Plain text |
 | `.pdf`, `.csv`, `.json` | Extracted / pretty-printed locally |
+| `.jsonl` | NDJSON line-by-line; **coding-notes** records formatted for session search |
 | `.yaml`, `.yml` | Parsed with **PyYAML `safe_load`** (no code execution) |
 | `.env`, `.env.*`, `*.env` | Parsed as dotenv key/value text for local search |
 | `.doc`, `.docx` | Docx preferred |

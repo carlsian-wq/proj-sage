@@ -13,10 +13,12 @@ from sage.config import (
     ENV_FILE_NAMES,
     SENSITIVE_EXTENSIONS,
     SKIP_DIR_NAMES,
+    SKIP_FILE_NAMES,
     SUPPORTED_EXTENSIONS,
 )
 
 _SKIP_LOWER = {n.lower() for n in SKIP_DIR_NAMES}
+_SKIP_FILES_LOWER = {n.lower() for n in SKIP_FILE_NAMES}
 
 
 def is_env_file(path: Path) -> bool:
@@ -33,6 +35,8 @@ def is_env_file(path: Path) -> bool:
 
 def is_supported_file(path: Path) -> bool:
     if not path.is_file():
+        return False
+    if path.name.lower() in _SKIP_FILES_LOWER:
         return False
     if is_env_file(path):
         return True
@@ -80,6 +84,8 @@ def load_file_text(path: Path) -> str:
         return _load_csv(path)
     if suffix == ".json":
         return _load_json(path)
+    if suffix == ".jsonl":
+        return _load_jsonl(path)
     if suffix in {".yaml", ".yml"}:
         return _load_yaml(path)
     if suffix == ".docx":
@@ -128,6 +134,102 @@ def _load_json(path: Path) -> str:
         return json.dumps(data, indent=2, ensure_ascii=False)
     except json.JSONDecodeError:
         return text
+
+
+def _format_jsonl_record(obj: object, index: int) -> str:
+    """Turn one NDJSON object into searchable text (coding-notes aware)."""
+    if not isinstance(obj, dict):
+        return json.dumps(obj, ensure_ascii=False, default=str)
+
+    # log-sage coding-notes.jsonl shape
+    coding_keys = {
+        "session_id",
+        "session_title",
+        "user_query",
+        "kind",
+        "project",
+        "message",
+        "preview",
+        "timestamp",
+    }
+    if coding_keys & set(obj.keys()):
+        lines: list[str] = [f"### Coding note #{index + 1}"]
+        for key, label in (
+            ("timestamp", "When"),
+            ("project", "Project"),
+            ("kind", "Kind"),
+            ("session_title", "Session"),
+            ("session_id", "Session ID"),
+            ("user_query", "User request"),
+            ("message", "Notes / instructions"),
+            ("preview", "Preview"),
+        ):
+            val = obj.get(key)
+            if val is None or val == "":
+                continue
+            text = str(val).strip()
+            if not text:
+                continue
+            lines.append(f"{label}: {text}")
+        # Any remaining useful fields
+        for key, val in obj.items():
+            if key in {
+                "timestamp",
+                "project",
+                "kind",
+                "session_title",
+                "session_id",
+                "user_query",
+                "message",
+                "preview",
+                "level",
+                "logger",
+            }:
+                continue
+            if val is None or val == "":
+                continue
+            if isinstance(val, (dict, list)):
+                lines.append(
+                    f"{key}: {json.dumps(val, ensure_ascii=False, default=str)[:2000]}"
+                )
+            else:
+                lines.append(f"{key}: {val}")
+        return "\n".join(lines)
+
+    return json.dumps(obj, indent=2, ensure_ascii=False, default=str)
+
+
+def _load_jsonl(path: Path) -> str:
+    """
+    Load newline-delimited JSON (NDJSON / .jsonl).
+
+    Optimized for log-sage ``coding-notes.jsonl``: one record per line becomes
+    a labeled block so chunking can keep session notes coherent for RAG.
+    """
+    parts: list[str] = [f"# JSONL source: {path.name}"]
+    try:
+        raw_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError as e:
+        return f"[Could not read jsonl {path.name}: {e}]"
+
+    n_ok = 0
+    n_bad = 0
+    for i, line in enumerate(raw_lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            obj = json.loads(stripped)
+        except json.JSONDecodeError:
+            n_bad += 1
+            parts.append(f"### Line {i + 1} (raw)\n{stripped[:4000]}")
+            continue
+        n_ok += 1
+        parts.append(_format_jsonl_record(obj, n_ok - 1))
+
+    parts.insert(1, f"# Records parsed: {n_ok}" + (f" | bad lines: {n_bad}" if n_bad else ""))
+    # Blank line between records helps chunk boundary detection
+    return "\n\n".join(parts)
 
 
 def _load_yaml(path: Path) -> str:

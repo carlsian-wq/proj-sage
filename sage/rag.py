@@ -54,11 +54,23 @@ def search_and_answer(
 
     try:
         hits = vectorstore.query(question, project_tag=project_tag, top_k=top_k)
+    except vectorstore.ChromaIndexError as e:
+        return {"answer": "", "hits": [], "error": str(e)}
     except Exception as e:
+        msg = str(e)
+        hint = ""
+        low = msg.lower()
+        if "ollama" in low or "connection" in low or "embed" in low:
+            hint = " Is Ollama running with nomic-embed-text?"
+        elif "finding id" in low or "executing plan" in low:
+            hint = (
+                " Chroma index looks corrupted — close Project Sage and run "
+                r".\.venv\Scripts\python.exe scripts\rebuild_chroma.py"
+            )
         return {
             "answer": "",
             "hits": [],
-            "error": f"Retrieval failed: {e}. Is Ollama running with nomic-embed-text?",
+            "error": f"Retrieval failed: {msg}.{hint}",
         }
 
     if not hits:

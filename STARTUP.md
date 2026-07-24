@@ -73,14 +73,29 @@ Quick status:
 .\scripts\show_running.ps1 -Details   # PID chains for each running app
 ```
 
-## Formats: YAML & env (local only)
+## Formats: YAML, env, JSONL (local only)
 
-Supported alongside docs: **`.yaml` / `.yml`** and **`.env`** (also `.env.local`, `*.env`).
+Supported alongside docs: **`.yaml` / `.yml`**, **`.env`** (also `.env.local`, `*.env`), and **`.jsonl`**.
 
 - YAML: `yaml.safe_load` only (requires `PyYAML` in `.venv`).
 - Env: keys/values indexed into local Chroma under `data/` for natural-language questions about config.
+- JSONL: one JSON object per line; Log Sage **coding-notes** fields become labeled blocks for RAG.
 - Runtime **`logs/`** folders and **`.log`** files are not indexed (too large; use log-sage for log search).
+- Sidecars `coding_notes_state.json` / `*_status.json` are skipped when walking folders.
 - No cloud upload — Ollama + Streamlit stay on localhost. Keep `data/` private and gitignored.
+
+### Log Sage coding notes
+
+```text
+Folder:  C:\Users\c_sia\OneDrive\Documents\GitHub\log-sage\exports
+File:    coding-notes.jsonl
+Tag:     coding-notes
+```
+
+1. Use **one** project tag: **`coding-notes`** → that folder (not also tags named `exports` or similar).
+2. Walking the **log-sage** repo root skips the nested `exports/` dir so notes are not double-indexed.
+3. After Log Sage re-exports notes, **Force ingest** on **coding-notes** (or folder watcher).
+4. Main UI filter → **coding-notes** → ask about past sessions / task instructions.
 
 After upgrading deps:
 
@@ -88,7 +103,7 @@ After upgrading deps:
 .\.venv\Scripts\pip install -r requirements.txt
 ```
 
-Then **Force ingest** the project so existing folders pick up new `.yaml` / `.env` files.
+Then **Force ingest** so existing folders pick up new extensions.
 
 ## Folder watcher (recommended)
 

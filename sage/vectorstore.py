@@ -132,10 +132,21 @@ def ensure_chroma_ready() -> None:
 
 def _wrap_chroma_err(exc: Exception) -> Exception:
     msg = str(exc).lower()
-    if "hnsw" in msg or "compactor" in msg or "segment reader" in msg:
+    # HNSW/OneDrive races often surface as "Error finding id" or plan/exec failures
+    corrupt_markers = (
+        "hnsw",
+        "compactor",
+        "segment reader",
+        "error finding id",
+        "finding id",
+        "error executing plan",
+        "internal error",
+    )
+    if any(m in msg for m in corrupt_markers):
         return ChromaIndexError(
-            "Chroma vector index is corrupted. Close Project Sage, then run: "
-            r".venv\Scripts\python.exe scripts\rebuild_chroma.py"
+            "Chroma vector index is corrupted (often after concurrent ingest "
+            "or OneDrive sync on data/chroma). Close Project Sage fully, then run:\n"
+            r"  .\.venv\Scripts\python.exe scripts\rebuild_chroma.py"
         )
     return exc
 

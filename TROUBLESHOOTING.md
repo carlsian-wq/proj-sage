@@ -211,7 +211,15 @@ Get-Content data\faulthandler.log -Tail 20 -ErrorAction SilentlyContinue
 **Common causes**
 
 1. **Folder watcher CPU thrash (Windows)** — old builds used `PollingObserver` on every registered folder **including `venv/`**. With several GitHub repos under OneDrive that is **tens of thousands of files** scanned continuously → fans max out → Streamlit dies with no traceback. **Fix (current tree):** default is **poll-only** (`watcher_fs_observer: none` / `auto` on Windows) — smart scan of supported docs only, skips `venv`, `node_modules`, `logs`, etc. Confirm `data/settings.json` has `"watcher_fs_observer": "none"` (or `"auto"`). Never set `"polling"` on large trees. Restart Streamlit after changing settings.
-2. **Chroma index corruption** — concurrent ingest + watcher poll, or OneDrive syncing `data/chroma/` mid-write. Fix: `stop_project_sage.ps1` → `rebuild_chroma.py` → restart.
+2. **Chroma index corruption** — concurrent ingest + watcher poll, or OneDrive syncing `data/chroma/` mid-write. UI may show:
+   - `Retrieval failed: … Error finding id` / `Error executing plan: Internal error`
+   - Misleading “Is Ollama running with nomic-embed-text?” (older builds; Ollama is usually fine — **count can still show thousands of chunks** while HNSW query crashes).
+   **Fix:** stop Project Sage → rebuild → restart:
+   ```powershell
+   .\scripts\stop_project_sage.ps1
+   .\.venv\Scripts\python.exe scripts\rebuild_chroma.py
+   .\scripts\start_streamlit.ps1
+   ```
 3. **Active project dropdown** — fixed in current `app.py` (stable `key="selected_tag"`). Restart after pull.
 4. **Watcher auto-ingest during Force ingest** — poll scan and file-watch ingest skip when Chroma write lock is held. All Chroma reads/writes are serialized in-process (UI + watcher threads). Still avoid CLI ingest while the app is open.
 5. **Closing the wrong window** — **Project Sage** shortcut only opens the browser; the server runs in **Project Sage Streamlit**. Closing that console stops :8504 with no error text.
