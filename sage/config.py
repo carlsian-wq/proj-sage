@@ -51,6 +51,14 @@ SKIP_FILE_NAMES = {
     "cache_meta.json",
 }
 
+# Filename substrings that mark backups / archives (not live corpus)
+SKIP_FILE_SUBSTRINGS = (
+    ".bak",
+    ".legacy",
+    ".pre-retag",
+    ".archive",
+)
+
 # Dotfile env variants (Path.suffix is empty for a file named exactly ".env")
 ENV_FILE_NAMES = {
     ".env",
@@ -86,9 +94,9 @@ SKIP_DIR_NAMES = {
     "logs",  # runtime logs (can be huge; re-index docs not log tails)
     "backtest_results",  # hyperliquid-bot: hundreds of CSV/JSON run artifacts
     "archive",  # old code snapshots — not active docs
-    # log-sage/exports holds coding-notes.jsonl — index only via the dedicated
-    # "coding-notes" project tag, not when walking the log-sage repo root.
+    # log-sage/exports holds legacy exports; coding-notes hub has _archive/
     "exports",
+    "_archive",
 }
 
 

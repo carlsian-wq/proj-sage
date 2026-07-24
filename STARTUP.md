@@ -84,18 +84,21 @@ Supported alongside docs: **`.yaml` / `.yml`**, **`.env`** (also `.env.local`, `
 - Sidecars `coding_notes_state.json` / `*_status.json` are skipped when walking folders.
 - No cloud upload — Ollama + Streamlit stay on localhost. Keep `data/` private and gitignored.
 
-### Log Sage coding notes
+### Coding notes (all Grok projects — central hub)
 
 ```text
-Folder:  C:\Users\c_sia\OneDrive\Documents\GitHub\log-sage\exports
+Hub:     C:\Users\c_sia\OneDrive\Documents\GitHub\coding-notes\
 File:    coding-notes.jsonl
 Tag:     coding-notes
+Source:  ~/.grok/sessions/  (export via Log Sage)
 ```
 
-1. Use **one** project tag: **`coding-notes`** → that folder (not also tags named `exports` or similar).
-2. Walking the **log-sage** repo root skips the nested `exports/` dir so notes are not double-indexed.
-3. After Log Sage re-exports notes, **Force ingest** on **coding-notes** (or folder watcher).
-4. Main UI filter → **coding-notes** → ask about past sessions / task instructions.
+Notes are **not log-sage-only** — the exporter scans every Grok session cwd and sets a `project` field (`proj-sage`, `hyperliquid-bot`, …).
+
+1. One Project Sage tag: **`coding-notes`** → the hub folder above.
+2. Refresh extract: `cd log-sage; .\venv\Scripts\python.exe scripts\export_coding_notes.py`
+3. Then **Force ingest** on **coding-notes** (or folder watcher).
+4. Search with filter **coding-notes** (ask about a repo by name in the query).
 
 After upgrading deps:
 

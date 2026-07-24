@@ -9,7 +9,7 @@ Local **RAG search agent** for coding project documentation.
 
 Tag projects, point at local folders or upload files (`txt`, `md`, `pdf`, `csv`, `json`, `jsonl`, `yaml`/`yml`, `.env`, `doc`, `docx`), auto-ingest on change, and ask natural-language questions with grounded answers + citations.
 
-**Coding notes:** single tag **`coding-notes`** → `log-sage\exports` (`coding-notes.jsonl`). Do not add duplicate tags for the same folder.
+**Coding notes:** multi-project hub `GitHub\coding-notes\` (from all Grok sessions). Tag **`coding-notes`** only — see that folder’s README.
 
 ## Requirements
 

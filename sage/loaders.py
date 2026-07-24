@@ -14,11 +14,13 @@ from sage.config import (
     SENSITIVE_EXTENSIONS,
     SKIP_DIR_NAMES,
     SKIP_FILE_NAMES,
+    SKIP_FILE_SUBSTRINGS,
     SUPPORTED_EXTENSIONS,
 )
 
 _SKIP_LOWER = {n.lower() for n in SKIP_DIR_NAMES}
 _SKIP_FILES_LOWER = {n.lower() for n in SKIP_FILE_NAMES}
+_SKIP_SUBSTR_LOWER = tuple(s.lower() for s in SKIP_FILE_SUBSTRINGS)
 
 
 def is_env_file(path: Path) -> bool:
@@ -36,7 +38,10 @@ def is_env_file(path: Path) -> bool:
 def is_supported_file(path: Path) -> bool:
     if not path.is_file():
         return False
-    if path.name.lower() in _SKIP_FILES_LOWER:
+    name_l = path.name.lower()
+    if name_l in _SKIP_FILES_LOWER:
+        return False
+    if any(s in name_l for s in _SKIP_SUBSTR_LOWER):
         return False
     if is_env_file(path):
         return True
