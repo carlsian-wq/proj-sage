@@ -4,6 +4,9 @@
 [server]
 port = 8504
 headless = true
+# OneDrive + Windows: native watchdog often access-violates under load.
+# Disable Streamlit's source file watcher (restart app manually after code edits).
+fileWatcherType = "none"
 
 [logger]
 level = "info"
