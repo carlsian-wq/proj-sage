@@ -13,7 +13,7 @@ SETTINGS_PATH = DATA_DIR / "settings.json"
 _lock = threading.RLock()
 
 _DEFAULTS: dict[str, Any] = {
-    "watcher_auto_start": False,
+    "watcher_auto_start": True,
     "watcher_poll_scan_s": 120,
     # auto → Windows: poll-only (safe); other OS: native FS observer
     # none | native | polling | auto

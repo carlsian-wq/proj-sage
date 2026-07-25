@@ -210,7 +210,9 @@ Get-Content data\faulthandler.log -Tail 20 -ErrorAction SilentlyContinue
 
 **Common causes**
 
-1. **Folder watcher CPU thrash (Windows)** — old builds used `PollingObserver` on every registered folder **including `venv/`**. With several GitHub repos under OneDrive that is **tens of thousands of files** scanned continuously → fans max out → Streamlit dies with no traceback. **Fix (current tree):** default is **poll-only** (`watcher_fs_observer: none` / `auto` on Windows) — smart scan of supported docs only, skips `venv`, `node_modules`, `logs`, etc. Confirm `data/settings.json` has `"watcher_fs_observer": "none"` (or `"auto"`). Never set `"polling"` on large trees. Restart Streamlit after changing settings.
+1. **Folder watcher CPU thrash (Windows)** — old builds used `PollingObserver` on every registered folder **including `venv/`**. With several GitHub repos under OneDrive that is **tens of thousands of files** scanned continuously → fans max out → Streamlit dies with no traceback. **Fix (current tree):** default is **poll-only** (`watcher_fs_observer: none` / `auto` on Windows) — smart scan of supported docs only, skips `venv`, `node_modules`, `logs`, etc. Confirm `data/settings.json` has `"watcher_fs_observer": "none"` (or `"auto"`) and `"watcher_auto_start": true` for live index updates. Never set `"polling"` on large trees. Restart Streamlit after changing settings.
+
+   **Note:** Streamlit `[server] fileWatcherType` only hot-reloads **app code** (`app.py`). It does **not** control document auto-ingest. Keep `fileWatcherType = "none"` on OneDrive; document freshness still comes from the folder watcher poll (every ~120s, first scan ~30s after start).
 2. **Chroma index corruption** — concurrent ingest + watcher poll, or OneDrive syncing `data/chroma/` mid-write. UI may show:
    - `Retrieval failed: … Error finding id` / `Error executing plan: Internal error`
    - Misleading “Is Ollama running with nomic-embed-text?” (older builds; Ollama is usually fine — **count can still show thousands of chunks** while HNSW query crashes).

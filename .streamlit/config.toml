@@ -4,8 +4,9 @@
 [server]
 port = 8504
 headless = true
-# OneDrive + Windows: native watchdog often access-violates under load.
-# Disable Streamlit's source file watcher (restart app manually after code edits).
+# Streamlit SOURCE watcher only (app.py hot-reload) — NOT document auto-ingest.
+# Project folder ingest is sage/watcher.py (poll-only on Windows). Keep this "none"
+# on OneDrive to avoid native access violations; restart Streamlit after code edits.
 fileWatcherType = "none"
 
 [logger]

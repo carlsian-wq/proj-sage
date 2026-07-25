@@ -82,6 +82,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         debounce_s: float = 1.5,
         on_event: ProgressCb | None = None,
         on_activity: Callable[[], None] | None = None,
+        ingest_gate: threading.Lock | None = None,
     ):
         super().__init__()
         self.project_tag = project_tag
@@ -89,6 +90,7 @@ class _DebouncedHandler(FileSystemEventHandler):
         self.debounce_s = debounce_s
         self.on_event = on_event
         self.on_activity = on_activity
+        self._ingest_gate = ingest_gate
         self._pending: dict[str, float] = {}
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -127,11 +129,18 @@ class _DebouncedHandler(FileSystemEventHandler):
             dest = getattr(event, "dest_path", None) or event.src_path
             self._schedule(dest)
 
-    def _ingest_path(self, path: str) -> None:
+    def _ingest_path(self, path: str, ingest_gate: threading.Lock | None = None) -> None:
         if is_write_locked():
             if self.on_event:
                 self.on_event(f"Auto-ingest deferred — Chroma ingest in progress: {path}")
             return
+        acquired = False
+        if ingest_gate is not None:
+            acquired = ingest_gate.acquire(blocking=False)
+            if not acquired:
+                if self.on_event:
+                    self.on_event(f"Auto-ingest deferred — scan busy: {path}")
+                return
         try:
             if self.on_event:
                 self.on_event(f"Auto-ingest: {path}")
@@ -149,6 +158,9 @@ class _DebouncedHandler(FileSystemEventHandler):
         except Exception as e:
             if self.on_event:
                 self.on_event(f"Watcher error: {e}")
+        finally:
+            if acquired and ingest_gate is not None:
+                ingest_gate.release()
 
     def _loop(self) -> None:
         while not self._stop.is_set():
@@ -161,14 +173,22 @@ class _DebouncedHandler(FileSystemEventHandler):
                         ready.append(path)
                         del self._pending[path]
             for path in ready:
-                self._ingest_path(path)
+                self._ingest_path(path, ingest_gate=self._ingest_gate)
 
     def stop(self) -> None:
         self._stop.set()
 
 
 class FolderWatcherService:
-    """Manages optional FS observers + a skip-dir-aware poll scan for folder sources."""
+    """Manages optional FS observers + a skip-dir-aware poll scan for folder sources.
+
+    Document freshness does **not** depend on Streamlit's ``fileWatcherType``.
+    On Windows, default mode is poll-only (no watchdog Observer) so registered
+    project folders stay up to date without the CPU thrash of PollingObserver.
+    """
+
+    # Delay first poll so the UI can finish its first Chroma open after boot.
+    _FIRST_POLL_DELAY_S = 30
 
     def __init__(self, on_event: ProgressCb | None = None):
         self.on_event = on_event
@@ -182,6 +202,10 @@ class FolderWatcherService:
         self._poll_scan_s = int(load_settings().get("watcher_poll_scan_s", 120))
         self._observer_mode: ObserverMode = "none"
         self._running = False
+        # Single-flight: never overlap two poll scans (or poll + debounced FS ingest)
+        self._ingest_gate = threading.Lock()
+        # path -> (mtime_ns, size) seen after last successful check; skip cold hash/chroma
+        self._seen_stat: dict[str, tuple[int, int]] = {}
 
     @property
     def running(self) -> bool:
@@ -206,41 +230,79 @@ class FolderWatcherService:
             parts.append(f"last activity {self._last_activity}")
         return " · ".join(parts)
 
+    def _stat_sig(self, path: Path) -> tuple[int, int] | None:
+        try:
+            st = path.stat()
+            return (int(getattr(st, "st_mtime_ns", int(st.st_mtime * 1e9))), int(st.st_size))
+        except OSError:
+            return None
+
     def _poll_scan(self) -> None:
         """Primary change detection: only supported files, skip venv/logs/etc."""
         if is_write_locked():
             if self.on_event:
                 self.on_event("Poll scan skipped — Chroma ingest in progress")
             return
-        for tag, source in get_all_sources():
-            if source.get("type") != "folder":
-                continue
-            root = Path(source["path"])
-            if not root.is_dir():
-                continue
-            source_id = source.get("id", "")
-            for fpath in iter_supported_files(root):
-                try:
-                    report = ingest_file(
-                        fpath,
-                        project_tag=tag,
-                        source_id=source_id,
-                        force=False,
-                        progress=None,
-                    )
-                    if report.files_ingested:
-                        _touch_source_meta(tag, source_id)
-                        self._note_activity()
+        # Do not stack poll scans; drop this tick if a previous scan still runs
+        if not self._ingest_gate.acquire(blocking=False):
+            if self.on_event:
+                self.on_event("Poll scan skipped — previous scan still running")
+            return
+        try:
+            for tag, source in get_all_sources():
+                if not self.running:
+                    break
+                if source.get("type") != "folder":
+                    continue
+                root = Path(source["path"])
+                if not root.is_dir():
+                    continue
+                source_id = source.get("id", "")
+                for fpath in iter_supported_files(root):
+                    if not self.running:
+                        break
+                    if is_write_locked():
                         if self.on_event:
-                            self.on_event(f"Poll-ingest: {fpath}")
-                except Exception as e:
-                    if self.on_event:
-                        self.on_event(f"Poll scan error ({fpath.name}): {e}")
+                            self.on_event("Poll scan paused — Chroma write lock held")
+                        return
+                    key = str(fpath)
+                    sig = self._stat_sig(fpath)
+                    if sig is not None and self._seen_stat.get(key) == sig:
+                        # Unchanged on disk since last check — no Chroma touch
+                        continue
+                    try:
+                        report = ingest_file(
+                            fpath,
+                            project_tag=tag,
+                            source_id=source_id,
+                            force=False,
+                            progress=None,
+                        )
+                        if sig is not None and (
+                            report.files_ingested or report.files_skipped_unchanged
+                        ):
+                            self._seen_stat[key] = sig
+                        if report.files_ingested:
+                            _touch_source_meta(tag, source_id)
+                            self._note_activity()
+                            if self.on_event:
+                                self.on_event(f"Poll-ingest: {fpath}")
+                            # Brief yield after writes so UI queries can interleave
+                            time.sleep(0.05)
+                    except Exception as e:
+                        if self.on_event:
+                            self.on_event(f"Poll scan error ({fpath.name}): {e}")
+        finally:
+            self._ingest_gate.release()
 
     def _poll_loop(self) -> None:
-        # First scan shortly after start so users see activity without waiting full interval
-        if not self._poll_stop.wait(5):
+        # First full scan after UI has had time to open Chroma (avoids boot race).
+        if not self._poll_stop.wait(self._FIRST_POLL_DELAY_S):
             if self.running:
+                if self.on_event:
+                    self.on_event(
+                        f"Starting first poll scan (every {self._poll_scan_s}s thereafter)"
+                    )
                 self._poll_scan()
         while not self._poll_stop.is_set():
             if self._poll_stop.wait(self._poll_scan_s):
@@ -275,6 +337,7 @@ class FolderWatcherService:
                         source.get("id", ""),
                         on_event=self.on_event,
                         on_activity=self._note_activity,
+                        ingest_gate=self._ingest_gate,
                     )
                     observer.schedule(handler, str(path), recursive=True)
                     handlers.append(handler)
