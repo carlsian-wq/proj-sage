@@ -5,7 +5,7 @@
 Install or refresh shortcuts (uses `assets/logo.ico`):
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 ```
 
@@ -25,7 +25,7 @@ Both shortcuts use the Project Sage logo (`assets/logo.ico`).
 ## Manual run
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 .\.venv\Scripts\Activate.ps1
 streamlit run app.py
 # uses port 8504 from .streamlit/config.toml (or: --server.port 8504)
@@ -87,7 +87,7 @@ Supported alongside docs: **`.yaml` / `.yml`**, **`.env`** (also `.env.local`, `
 ### Coding notes (all Grok projects — central hub)
 
 ```text
-Hub:     C:\Users\c_sia\OneDrive\Documents\GitHub\coding-notes\
+Hub:     C:\Users\c_sia\Documents\GitHub\coding-notes\
 File:    coding-notes.jsonl
 Tag:     coding-notes
 Source:  ~/.grok/sessions/  (export via Log Sage)
