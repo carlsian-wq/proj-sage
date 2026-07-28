@@ -35,7 +35,7 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 
 ## Product rules (do not regress)
 
-1. **Update docs after every turn** — `README.md`, `STARTUP.md`, `TROUBLESHOOTING.md`, this file when conventions change.
+1. **Update docs after every turn** — `README.md`, `STARTUP.md`, `TROUBLESHOOTING.md`, **`CHANGELOG.md`** (required; see workspace `AGENTS.md`), this file when conventions change.
 2. **Folder add creates the project tag** — default tag = folder basename (`suggest_tag_from_path`). Never silently attach a new folder to an unrelated Active project without the user opting in (“Attach to active project”).
 3. **Uploads use Active project** only; require a selected tag.
 4. **Local-only processing** — no cloud LLM/upload paths for indexed content. Sensitive: `.env` / `.env.*` stay on disk under `data/`.
@@ -53,6 +53,7 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 - PowerShell: here-strings / small scripts for anything with `$` or nested quotes (see root `Agents.md`).
 - Do not invent monorepo packages shared with other GitHub projects.
 - After user-facing changes, end with **What you should do** (reload/restart/verify bullets) when action matters.
+- **CHANGELOG.md (required):** after every meaningful change, append a dated entry (what / why / verify) for Project Sage search; include **When:** `YYYY-MM-DD HH:MM PDT` or `PST`. Template and rules: workspace root `AGENTS.md`.
 
 ---
 
