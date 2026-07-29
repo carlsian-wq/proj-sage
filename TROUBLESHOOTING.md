@@ -28,7 +28,7 @@ Quick fixes for the Streamlit desktop apps on this PC. For first-time setup and 
 - Any time you are unsure which dashboard ports are in use.
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 .\scripts\show_running.ps1
 ```
 
@@ -131,7 +131,7 @@ The on-disk config is correct; the **old Streamlit process** was still in memory
 **While a long Force ingest runs:** expand **Last ingest log** in the sidebar — filenames should advance. If the caption is frozen for 10+ minutes, check Ollama (`http://127.0.0.1:11434`) and remove a stale lock only if ingest is not running:
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 Get-Content data\chroma\.write.lock   # PID holding the lock
 .\scripts\stop_project_sage.ps1       # if you need to abort
 Remove-Item data\chroma\.write.lock -ErrorAction SilentlyContinue
@@ -202,7 +202,7 @@ Silent return to the PowerShell prompt usually means a **hard kill** (OOM / nati
 | `data/launcher.log` | Browser launcher only (not the server) |
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 Get-Content data\streamlit.log -Tail 40
 Get-Content data\crash.log -Tail 20 -ErrorAction SilentlyContinue
 Get-Content data\faulthandler.log -Tail 20 -ErrorAction SilentlyContinue

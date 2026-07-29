@@ -24,7 +24,7 @@ ollama pull nomic-embed-text
 ## Setup
 
 ```powershell
-cd C:\Users\c_sia\OneDrive\Documents\GitHub\proj-sage
+cd C:\Users\c_sia\Documents\GitHub\proj-sage
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt

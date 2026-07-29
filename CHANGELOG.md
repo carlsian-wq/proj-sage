@@ -9,6 +9,25 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-07-28 — CODE-HOUSE .venv; OneDrive path cleanup
+
+**Project:** `proj-sage`
+**When:** 2026-07-28 22:00 PDT
+**Summary:** Created project `.venv\` with chromadb/streamlit/ollama client deps on CODE-HOUSE. README/TROUBLESHOOTING paths no longer point at OneDrive. Ollama server + models still required before RAG ingest works.
+
+**Details:**
+- Uses **`.venv`** (not `venv`) per project AGENTS.
+- Fresh Chroma/registry will be created on first run after Ollama is installed (`qwen2.5:7b`, `nomic-embed-text`).
+- Independent of BOT-HOUSE index — re-ingest local folders when ready.
+
+**Verify / operate:**
+- `.\.venv\Scripts\python.exe -c "import streamlit, chromadb; print('ok')"`
+- Install Ollama then pull models before full UI RAG tests.
+
+**Files:** `.venv/` (local), `README.md`, `TROUBLESHOOTING.md`
+
+---
+
 ## 2026-07-27 — Require Pacific PDT/PST timestamp on every CHANGELOG entry
 
 **Project:** `proj-sage`
