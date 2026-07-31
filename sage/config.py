@@ -26,6 +26,12 @@ CHUNK_OVERLAP = 200
 
 # Retrieval
 TOP_K = 6
+# Over-fetch semantic candidates, then hybrid re-rank down to TOP_K
+CANDIDATE_MULTIPLIER = 4
+MIN_CANDIDATES = 16
+MAX_CANDIDATES = 40
+# Weight for lexical/path boosts when blending with cosine-style semantic score
+LEXICAL_WEIGHT = 0.14
 
 # Supported source extensions (all processed locally only — see loaders / README)
 SUPPORTED_EXTENSIONS = {

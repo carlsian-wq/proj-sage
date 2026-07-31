@@ -543,6 +543,10 @@ def _main_search() -> None:
     hits = result.get("hits") or []
     if hits:
         st.subheader("Sources")
+        st.caption(
+            "Scores are hybrid (semantic similarity + keyword/path boost). "
+            "Open a source to verify the answer against the raw excerpt."
+        )
         for i, hit in enumerate(hits, start=1):
             meta = hit.get("metadata") or {}
             score = hit.get("score")
@@ -551,6 +555,12 @@ def _main_search() -> None:
             tag = meta.get("project_tag", "?")
             with st.expander(f"[{i}] {tag} · score {score_s} · {Path(path).name}"):
                 st.caption(path)
+                sem = hit.get("semantic_score")
+                lex = hit.get("lexical_score")
+                if isinstance(sem, (int, float)) or isinstance(lex, (int, float)):
+                    sem_s = f"{sem:.2f}" if isinstance(sem, (int, float)) else "n/a"
+                    lex_s = f"{lex:.2f}" if isinstance(lex, (int, float)) else "n/a"
+                    st.caption(f"semantic={sem_s} · lexical={lex_s}")
                 st.markdown(hit.get("text") or "")
 
 

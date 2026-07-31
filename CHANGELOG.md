@@ -9,6 +9,30 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-07-30 — Hybrid re-rank + grounding fix for off-topic answers
+
+**Project:** `proj-sage`
+**When:** 2026-07-30 21:37 PDT
+**Summary:** Fixed bad natural-language answers where semantic search alone ranked adjacent topics (e.g. live_engine **regime** / 1h trend) above the docs that actually answer the question (e.g. poll **interval** via `--interval` and `poll_interval_sec`). Answers now use hybrid retrieval and a stricter no-invention prompt.
+
+**Details:**
+- User asked (filter `hyperliquid-bot`): “how do I change the interval on live_engine.py startup?” Project Sage answered with `--regime bullish/bearish`, citing SETUP.md at score ~0.60 — wrong. Correct ops docs are in hyperliquid-bot `RUNNING.md` (`--interval` seconds, `poll_interval_sec` in config.yaml).
+- Root cause: pure Chroma cosine retrieval + qwen2.5:7b over-generalizing from weak/adjacent excerpts; “interval” in everyday English is not the same embedding neighborhood as the technical key `poll_interval_sec`.
+- Added `sage/rerank.py`: extract flags, filenames, snake_case tokens, and content words from the question; over-fetch semantic candidates; re-rank with lexical/path boosts; return TOP_K.
+- `sage/rag.py`: candidate over-fetch (`CANDIDATE_MULTIPLIER` / `MIN_CANDIDATES`), hybrid re-rank, lower temperature (0.1), system prompt forbids inventing CLI flags and forbids swapping related concepts (regime ≠ interval).
+- UI Sources expanders show hybrid score plus semantic/lexical breakdown.
+- Unit-checked re-ranker: synthetic SETUP vs RUNNING vs ARCHIVE chunks for the interval query put **RUNNING.md first**.
+
+**Verify / operate:**
+- Restart Project Sage Streamlit (code change; not hot-reloaded for imports already in memory).
+- With `hyperliquid-bot` indexed, search: `how do I change the interval on live_engine.py startup?`
+- Expect answer mentioning `--interval` and/or `poll_interval_sec`, with RUNNING.md (or equivalent) in Sources — not only `--regime`.
+- Offline re-rank smoke: `.\.venv\Scripts\python.exe -c "from sage.rerank import extract_query_terms; print(extract_query_terms('change interval on live_engine.py'))"`
+
+**Files:** `sage/rerank.py`, `sage/rag.py`, `sage/config.py`, `app.py`, `README.md`, `TROUBLESHOOTING.md`, `CHANGELOG.md`
+
+---
+
 ## 2026-07-28 — CODE-HOUSE .venv; OneDrive path cleanup
 
 **Project:** `proj-sage`

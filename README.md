@@ -67,6 +67,7 @@ Open the URL Streamlit prints (usually http://localhost:8504).
 4. **Folder watcher** — enable **Auto-start watcher on launch** (recommended), or click **Start** each session. On Windows the default is **poll-only**: every ~2 minutes it walks supported docs only (skips `venv`, `node_modules`, `logs`, …). Full recursive `PollingObserver` is off by default — it was pegging CPU on large OneDrive trees and could kill Streamlit with no error.
 5. **Last ingest** in the sources panel updates after full **Ingest** / **Force ingest**, and also after the watcher auto-ingests changed files.
 6. In the main panel, choose **All projects** or a **project tag** filter, type a question, **Search**. Use **Clear Search** next to Search to reset the query and results.
+7. Answers are grounded in retrieved excerpts. Retrieval is **hybrid**: semantic neighbors from Chroma, then re-ranked with keyword/path boosts (filenames, `--flags`, `snake_case` keys) so questions like “change the interval on live_engine startup” surface `poll_interval_sec` / `--interval` docs instead of nearby regime prose. Always check **Sources** under the answer.
 
 > **Note:** Tags only appear in filter dropdowns after they exist in the registry. Adding a folder creates the tag; merely embedding under another active project (old behavior) did not.
 

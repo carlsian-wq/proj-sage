@@ -110,6 +110,28 @@ The on-disk config is correct; the **old Streamlit process** was still in memory
 
 ---
 
+## Search answer is wrong / off-topic (e.g. asked interval, got regime)
+
+**Symptom:** Natural question about a CLI flag or config key (e.g. “how do I change the interval on `live_engine.py` startup?”) returns a confident but wrong answer (e.g. `--regime` bullish/bearish) citing a weak or adjacent doc.
+
+**Causes:**
+
+1. **Pure embedding retrieval** ranked “nearby” prose (regime / 1h trend) above the chunk that literally documents the asked concept (`--interval`, `poll_interval_sec` in `RUNNING.md`).
+2. **LLM over-generalized** from thin excerpts instead of saying the sources did not match.
+
+**Fix (2026-07-30):** Project Sage uses **hybrid re-rank** (semantic over-fetch + keyword/path boosts for identifiers, filenames, flags) and a stricter grounding prompt (do not invent flags; do not swap related concepts).
+
+**What you should do:**
+
+1. Restart **Project Sage Streamlit** so it loads the new `sage/rag.py` / `sage/rerank.py` (browser refresh alone is not enough).
+2. Re-run the same question with the project tag filter set (e.g. `hyperliquid-bot`).
+3. Open **Sources** under the answer — confirm `RUNNING.md` (or the real doc) is near the top and the excerpt actually mentions the flag/key.
+4. If Sources still look empty or stale: per-source **Ingest** on that project, or rebuild Chroma if the index is corrupt.
+
+**For hyperliquid-bot specifically:** poll loop timing is `poll_interval_sec` in `config.yaml` and CLI `--interval` seconds on `live_engine.py` — documented in **RUNNING.md**, not the regime switch.
+
+---
+
 ## Force ingest spins for hours (hyperliquid-bot)
 
 **Cause:** Force ingest re-embeds **every** supported file through local Ollama, even if unchanged. `hyperliquid-bot` had **~250 files** indexed — mostly `backtest_results/*.csv` and `*.json` run artifacts (~1,300+ embedding chunks). That can take **30–90+ minutes** on CPU Ollama with little search value.

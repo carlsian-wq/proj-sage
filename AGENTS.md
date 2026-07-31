@@ -44,6 +44,7 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 7. **Clear Search** — clear widget state via a flag before the text_area is created (never mutate `search_query` after the widget instantiates).
 8. **Chroma docs may be null** — coerce hit text before `.strip()`.
 9. **“Error finding id” on search** = corrupted Chroma HNSW (not Ollama). Stop app → `scripts/rebuild_chroma.py` → restart. Do not re-ingest while Streamlit is open.
+10. **Hybrid retrieval** — do not regress pure-embedding-only ranking for answers. Search path is `vectorstore.query` over-fetch → `sage/rerank.py` lexical/path boosts → TOP_K → grounded LLM (`sage/rag.py`). Prompt must forbid inventing flags and swapping related concepts (regime ≠ interval).
 
 ---
 
