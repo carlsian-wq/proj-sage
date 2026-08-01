@@ -126,6 +126,16 @@ def _refresh_projects() -> list[str]:
     return list_projects()
 
 
+def _after_registry_change() -> None:
+    """Keep watcher in sync after folder add/remove without a hard restart when possible."""
+    w = get_watcher(on_event=lambda m: None)
+    if w.running:
+        st.session_state.watcher_status = w.note_sources_changed()
+    elif load_settings().get("watcher_auto_start"):
+        # First folder may arrive after boot when auto-start found nothing to watch.
+        st.session_state.watcher_status = w.start()
+
+
 def _render_sources_panel(tag: str) -> None:
     sources = get_project_sources(tag)
     if not sources:
@@ -141,7 +151,7 @@ def _render_sources_panel(tag: str) -> None:
         with col_a:
             st.markdown(f"**{kind}** · `{label}`  \nFiles: {count} · Last ingest: `{last}`")
         with col_b:
-            if st.button("Ingest", key=f"ingest_src_{src['id']}", use_container_width=True):
+            if st.button("Ingest", key=f"ingest_src_{src['id']}", width="stretch"):
                 log_lines: list[str] = []
                 progress_slot = st.empty()
 
@@ -150,21 +160,24 @@ def _render_sources_panel(tag: str) -> None:
                     progress_slot.caption(msg)
 
                 with st.spinner("Ingesting changed files…"):
-                    report = ingest_source(
-                        tag,
-                        src,
-                        force=False,
-                        progress=_progress,
-                    )
+                    w = get_watcher()
+                    with w.ui_ingest_exclusive():
+                        report = ingest_source(
+                            tag,
+                            src,
+                            force=False,
+                            progress=_progress,
+                        )
                     st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
                 st.success("Source ingest complete.")
                 st.rerun()
         with col_c:
-            if st.button("Remove", key=f"rm_src_{src['id']}", use_container_width=True):
+            if st.button("Remove", key=f"rm_src_{src['id']}", width="stretch"):
                 # Drop vectors for files under this source when possible
                 if src.get("type") == "file":
                     vectorstore.delete_by_source_path(tag, src["path"])
                 remove_source(tag, src["id"])
+                _after_registry_change()
                 st.rerun()
 
 
@@ -202,7 +215,7 @@ def _sidebar() -> None:
         placeholder="e.g. my-api-docs",
         help="Optional if you add a folder below — the folder name becomes the tag automatically.",
     )
-    if st.sidebar.button("Create / select project", use_container_width=True):
+    if st.sidebar.button("Create / select project", width="stretch"):
         tag_name = normalize_tag(new_tag or "")
         if tag_name:
             ensure_project(tag_name)
@@ -271,7 +284,7 @@ def _sidebar() -> None:
             help="When checked, the folder is stored under the Active project tag above.",
         )
 
-    if st.sidebar.button("Add folder source", use_container_width=True, type="primary"):
+    if st.sidebar.button("Add folder source", width="stretch", type="primary"):
         if not folder or not folder.strip():
             st.sidebar.warning("Enter a folder path.")
         else:
@@ -298,12 +311,16 @@ def _sidebar() -> None:
                             srcs[-1] if srcs else None,
                         )
                         if folder_src:
-                            report = ingest_source(
-                                target_tag,
-                                folder_src,
-                                force=False,
-                                progress=lambda m: log_lines.append(m),
-                            )
+                            # Pause poll/FS ingest so UI + watcher never hit Chroma together
+                            # (native access violation was killing Streamlit with no traceback).
+                            w = get_watcher()
+                            with w.ui_ingest_exclusive():
+                                report = ingest_source(
+                                    target_tag,
+                                    folder_src,
+                                    force=False,
+                                    progress=lambda m: log_lines.append(m),
+                                )
                             st.session_state.last_ingest_log = (
                                 f"Project tag: {target_tag}\n"
                                 + "\n".join(log_lines)
@@ -314,9 +331,7 @@ def _sidebar() -> None:
                     st.sidebar.success(
                         f"Folder added under project tag “{target_tag}” (now in filter dropdowns)."
                     )
-                    w = get_watcher()
-                    if w.running:
-                        st.session_state.watcher_status = w.restart()
+                    _after_registry_change()
                     st.rerun()
                 except Exception as e:
                     st.sidebar.error(str(e))
@@ -335,30 +350,32 @@ def _sidebar() -> None:
         disabled=not bool(tag),
         help="Includes yaml/yml and env. All files stay on this machine (local Ollama + data/).",
     )
-    if uploads and st.sidebar.button("Upload & ingest", use_container_width=True, disabled=not bool(tag)):
+    if uploads and st.sidebar.button("Upload & ingest", width="stretch", disabled=not bool(tag)):
         log_lines: list[str] = []
         with st.spinner("Uploading and embedding…"):
-            for uf in uploads:
-                data = uf.getvalue()
-                dest = save_upload(tag, uf.name, data)
-                add_upload_source(tag, dest, uf.name)
-                srcs = get_project_sources(tag)
-                match = next(
-                    (
-                        s
-                        for s in reversed(srcs)
-                        if s.get("type") == "file" and Path(s["path"]) == dest.resolve()
-                    ),
-                    None,
-                )
-                if match:
-                    report = ingest_source(
-                        tag,
-                        match,
-                        force=True,
-                        progress=lambda m: log_lines.append(m),
+            w = get_watcher()
+            with w.ui_ingest_exclusive():
+                for uf in uploads:
+                    data = uf.getvalue()
+                    dest = save_upload(tag, uf.name, data)
+                    add_upload_source(tag, dest, uf.name)
+                    srcs = get_project_sources(tag)
+                    match = next(
+                        (
+                            s
+                            for s in reversed(srcs)
+                            if s.get("type") == "file" and Path(s["path"]) == dest.resolve()
+                        ),
+                        None,
                     )
-                    log_lines.append(report.summary())
+                    if match:
+                        report = ingest_source(
+                            tag,
+                            match,
+                            force=True,
+                            progress=lambda m: log_lines.append(m),
+                        )
+                        log_lines.append(report.summary())
         st.session_state.last_ingest_log = "\n".join(log_lines)
         st.sidebar.success(f"Uploaded {len(uploads)} file(s) under “{tag}”.")
         st.rerun()
@@ -369,7 +386,7 @@ def _sidebar() -> None:
     with c1:
         if st.button(
             "This project",
-            use_container_width=True,
+            width="stretch",
             help="Re-embed every file under the active tag (slow on large repos)",
             disabled=not bool(tag),
         ):
@@ -381,14 +398,16 @@ def _sidebar() -> None:
                 progress_slot.caption(msg[:120])
 
             with st.spinner(f"Force ingesting “{tag}”…"):
-                report = ingest_project(tag, force=True, progress=_progress)
+                w = get_watcher()
+                with w.ui_ingest_exclusive():
+                    report = ingest_project(tag, force=True, progress=_progress)
                 st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
             st.sidebar.success("Project ingest complete.")
             st.rerun()
     with c2:
         if st.button(
             "All projects",
-            use_container_width=True,
+            width="stretch",
             help="Re-embed every registered source (slowest)",
         ):
             log_lines = []
@@ -399,7 +418,9 @@ def _sidebar() -> None:
                 progress_slot.caption(msg[:120])
 
             with st.spinner("Force ingesting all projects…"):
-                report = ingest_all(force=True, progress=_progress_all)
+                w = get_watcher()
+                with w.ui_ingest_exclusive():
+                    report = ingest_all(force=True, progress=_progress_all)
                 st.session_state.last_ingest_log = "\n".join(log_lines) + "\n\n" + report.summary()
             st.sidebar.success("Full ingest complete.")
             st.rerun()
@@ -426,17 +447,17 @@ def _sidebar() -> None:
         st.rerun()
     wc1, wc2, wc3 = st.sidebar.columns(3)
     with wc1:
-        if st.button("Start", use_container_width=True):
+        if st.button("Start", width="stretch"):
             msg = get_watcher(on_event=lambda m: None).start()
             st.session_state.watcher_status = msg
             st.rerun()
     with wc2:
-        if st.button("Stop", use_container_width=True):
+        if st.button("Stop", width="stretch"):
             msg = get_watcher().stop()
             st.session_state.watcher_status = msg
             st.rerun()
     with wc3:
-        if st.button("Restart", use_container_width=True):
+        if st.button("Restart", width="stretch"):
             msg = get_watcher(on_event=lambda m: None).restart()
             st.session_state.watcher_status = msg
             st.rerun()
@@ -453,9 +474,12 @@ def _sidebar() -> None:
             type="secondary",
             disabled=not bool(tag),
         ):
-            vectorstore.delete_project(tag)
-            delete_project(tag)
+            w = get_watcher()
+            with w.ui_ingest_exclusive():
+                vectorstore.delete_project(tag)
+                delete_project(tag)
             st.session_state._pending_selected_tag = None
+            _after_registry_change()
             st.rerun()
 
     if st.session_state.last_ingest_log:
@@ -501,9 +525,9 @@ def _main_search() -> None:
     )
     btn_search, btn_clear, _ = st.columns([1, 1, 4])
     with btn_search:
-        search_clicked = st.button("Search", type="primary", use_container_width=True)
+        search_clicked = st.button("Search", type="primary", width="stretch")
     with btn_clear:
-        clear_clicked = st.button("Clear Search", use_container_width=True)
+        clear_clicked = st.button("Clear Search", width="stretch")
 
     if clear_clicked:
         st.session_state._clear_search = True

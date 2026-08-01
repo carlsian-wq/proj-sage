@@ -9,6 +9,28 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-08-01 — Add folder source no longer kills Streamlit (Chroma race)
+
+**Project:** `proj-sage`
+**When:** 2026-08-01 13:35 PDT
+**Summary:** Fix silent Streamlit exit when loading a new project via **Add folder source**. UI ingest and the folder watcher no longer hit Chroma at the same time; poll-only mode no longer hard-restarts the watcher after each folder add.
+
+**Details:**
+- Symptom: paste folder path → Add folder source → browser “connection lost”, console returns to prompt with little/no traceback. `data/faulthandler.log` showed `Windows fatal exception: access violation` in chromadb `_upsert` concurrent with UI `_count`.
+- Root cause: UI folder ingest + auto-start poll scanner (and a short `watcher.restart()` join) raced on the same PersistentClient/HNSW index; native crash kills the process.
+- `sage/watcher.py`: `ui_ingest_exclusive()` gate shared with poll/FS ingest; generation id so timed-out poll threads exit; longer stop join + gate drain; `note_sources_changed()` soft-refresh for poll-only (no restart).
+- `app.py`: wrap folder add, upload, force ingest, per-source ingest, and delete with exclusive gate; call `note_sources_changed` / auto-start after registry change instead of `restart()`; migrate remaining `use_container_width` → `width="stretch"`.
+- Documented in TROUBLESHOOTING under “Add folder source kills Streamlit”.
+
+**Verify / operate:**
+- Restart Streamlit: `.\scripts\stop_project_sage.ps1` then `.\scripts\start_streamlit.ps1` (or Project Sage Streamlit shortcut).
+- Add a small folder (e.g. `sample_docs` or a project path). Expect success toast and non-zero chunk count; console must stay running.
+- Confirm watcher status still shows poll-only after add (no need to Restart unless using native FS observer).
+
+**Files:** `sage/watcher.py`, `app.py`, `TROUBLESHOOTING.md`, `CHANGELOG.md`
+
+---
+
 ## 2026-07-30 — Hybrid re-rank + grounding fix for off-topic answers
 
 **Project:** `proj-sage`

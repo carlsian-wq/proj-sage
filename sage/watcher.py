@@ -5,9 +5,10 @@ from __future__ import annotations
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable, Iterator, Literal
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 
@@ -19,6 +20,11 @@ from sage.settings import load_settings
 
 ProgressCb = Callable[[str], None]
 ObserverMode = Literal["none", "native", "polling", "auto"]
+
+# Wait for an in-flight poll/FS ingest to finish before UI takes exclusive access.
+_UI_INGEST_GATE_TIMEOUT_S = 300
+# stop() join budget: one large embed batch can exceed a few seconds.
+_POLL_JOIN_TIMEOUT_S = 90
 
 
 def _utc_now() -> str:
@@ -206,6 +212,8 @@ class FolderWatcherService:
         self._ingest_gate = threading.Lock()
         # path -> (mtime_ns, size) seen after last successful check; skip cold hash/chroma
         self._seen_stat: dict[str, tuple[int, int]] = {}
+        # Bumped on stop/start so a join-timed-out poll thread exits without racing.
+        self._generation = 0
 
     @property
     def running(self) -> bool:
@@ -213,6 +221,51 @@ class FolderWatcherService:
 
     def _note_activity(self) -> None:
         self._last_activity = _utc_now()
+
+    def _folder_source_count(self) -> int:
+        return sum(
+            1
+            for _tag, source in get_all_sources()
+            if source.get("type") == "folder" and Path(source["path"]).is_dir()
+        )
+
+    @contextmanager
+    def ui_ingest_exclusive(self) -> Iterator[None]:
+        """Block poll/FS auto-ingest while Streamlit UI writes to Chroma.
+
+        Concurrent Chroma upsert (watcher) + count/query (UI) has caused Windows
+        access violations that kill Streamlit with no Python traceback — especially
+        right after *Add folder source* which both ingests and used to restart the
+        watcher mid-scan.
+        """
+        if self.on_event:
+            self.on_event("UI ingest: waiting for watcher scan gate…")
+        acquired = self._ingest_gate.acquire(timeout=_UI_INGEST_GATE_TIMEOUT_S)
+        if not acquired:
+            raise TimeoutError(
+                "Folder watcher is still scanning after "
+                f"{_UI_INGEST_GATE_TIMEOUT_S}s. Click Stop on the watcher, then retry."
+            )
+        try:
+            if self.on_event:
+                self.on_event("UI ingest: exclusive Chroma access")
+            yield
+        finally:
+            self._ingest_gate.release()
+
+    def note_sources_changed(self) -> str:
+        """Refresh after registry add/remove without a hard restart when possible.
+
+        Poll-only mode re-reads the registry every scan, so a full restart is
+        unnecessary and risky (zombie poll threads + concurrent Chroma).
+        Native/polling observers must restart to schedule new roots.
+        """
+        if not self.running:
+            return self.status_message()
+        if self._observer_mode == "none":
+            self._watched_count = self._folder_source_count()
+            return self.status_message()
+        return self.restart()
 
     def status_message(self) -> str:
         if not self.running:
@@ -295,20 +348,20 @@ class FolderWatcherService:
         finally:
             self._ingest_gate.release()
 
-    def _poll_loop(self) -> None:
+    def _poll_loop(self, generation: int) -> None:
         # First full scan after UI has had time to open Chroma (avoids boot race).
         if not self._poll_stop.wait(self._FIRST_POLL_DELAY_S):
-            if self.running:
+            if self.running and generation == self._generation:
                 if self.on_event:
                     self.on_event(
                         f"Starting first poll scan (every {self._poll_scan_s}s thereafter)"
                     )
                 self._poll_scan()
-        while not self._poll_stop.is_set():
+        while not self._poll_stop.is_set() and generation == self._generation:
             if self._poll_stop.wait(self._poll_scan_s):
                 break
-            if not self.running:
-                continue
+            if not self.running or generation != self._generation:
+                break
             self._poll_scan()
 
     def start(self) -> str:
@@ -349,22 +402,40 @@ class FolderWatcherService:
                 self._handlers = []
 
             self._watched_count = len(folder_sources)
+            self._generation += 1
+            generation = self._generation
             self._running = True
 
             self._poll_stop.clear()
-            self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
+            self._poll_thread = threading.Thread(
+                target=self._poll_loop,
+                args=(generation,),
+                daemon=True,
+                name=f"proj-sage-poll-{generation}",
+            )
             self._poll_thread.start()
             return self.status_message()
 
     def stop(self) -> str:
+        poll_thread: threading.Thread | None = None
         with self._lock:
             if not self._running:
                 return "Watcher not running."
             self._running = False
+            self._generation += 1  # invalidate any poll loop that missed the stop event
             self._poll_stop.set()
-            if self._poll_thread:
-                self._poll_thread.join(timeout=2)
+            poll_thread = self._poll_thread
             self._poll_thread = None
+
+        # Join outside the service lock so a finishing scan can update status safely.
+        if poll_thread is not None and poll_thread.is_alive():
+            poll_thread.join(timeout=_POLL_JOIN_TIMEOUT_S)
+
+        # Drain in-flight scan if join timed out but gate is still held briefly.
+        if self._ingest_gate.acquire(timeout=30):
+            self._ingest_gate.release()
+
+        with self._lock:
             if self._observer is not None:
                 try:
                     self._observer.stop()

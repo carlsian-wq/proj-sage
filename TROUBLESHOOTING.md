@@ -281,6 +281,43 @@ Get-Content data\faulthandler.log -Tail 20 -ErrorAction SilentlyContinue
 
 ---
 
+## Add folder source kills Streamlit (silent exit / connection lost)
+
+**Symptom:** Paste a local folder path → **Add folder source** → browser loses connection; Streamlit console returns to the PowerShell prompt with little or no Python traceback. `data/faulthandler.log` may show `Windows fatal exception: access violation` inside `chromadb` (`_upsert` / `_count`) while the folder watcher poll thread is also running.
+
+**Cause:** Two writers/readers hit the same Chroma native index at once:
+
+1. Sidebar **Add folder source** (and force-ingest / upload) embeds on the Streamlit script thread.
+2. Folder watcher poll (auto-start, every ~120s) also upserts / hash-checks files.
+3. Older builds also called `watcher.restart()` immediately after folder add (2s join timeout) so a **zombie poll thread** could keep writing while the UI counted chunks on the next rerun.
+
+Native Chroma access violations kill the whole process — Streamlit cannot catch them as Python exceptions.
+
+**Fix (current tree):**
+
+- UI ingest paths take `watcher.ui_ingest_exclusive()` (shared gate with poll/FS auto-ingest) so poll waits while folder-add / force-ingest / upload runs.
+- After folder add/remove, poll-only mode uses `note_sources_changed()` (updates watched count; next poll re-reads registry) instead of a hard `restart()`.
+- Watcher `stop()` bumps a generation id, joins the poll thread longer, and drains the ingest gate so restart cannot leave dual scanners.
+
+**What to do:**
+
+1. Restart Project Sage so the new code loads:
+   ```powershell
+   .\scripts\stop_project_sage.ps1
+   .\scripts\start_streamlit.ps1
+   ```
+2. Confirm `data/settings.json` has `"watcher_fs_observer": "none"` (Windows default).
+3. Add the folder again; leave the **Project Sage Streamlit** console open and watch for a normal success toast (not a return to the prompt).
+4. If it still dies with no traceback, stop the app and rebuild Chroma (corrupt HNSW can still hard-crash):
+   ```powershell
+   .\scripts\stop_project_sage.ps1
+   .\.venv\Scripts\python.exe scripts\rebuild_chroma.py
+   .\scripts\start_streamlit.ps1
+   ```
+5. Optional: sidebar **Folder watcher → Stop** before adding a very large repo, then **Start** after ingest finishes.
+
+---
+
 ## Script reference
 
 | Script | Purpose |
