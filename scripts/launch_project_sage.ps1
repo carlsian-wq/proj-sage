@@ -16,7 +16,21 @@ $Streamlit = Join-Path $ProjectRoot ".venv\Scripts\streamlit.exe"
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $LogDir = Join-Path $ProjectRoot "data"
 $LogFile = Join-Path $LogDir "launcher.log"
-$Url = "http://localhost:$Port"
+
+function Get-SageListenAddress {
+    $cfg = Join-Path $ProjectRoot ".streamlit\config.toml"
+    $addr = "10.0.0.201"
+    if (Test-Path -LiteralPath $cfg) {
+        foreach ($line in Get-Content -LiteralPath $cfg) {
+            if ($line -match '^\s*address\s*=\s*"([^"]+)"') {
+                return $Matches[1]
+            }
+        }
+    }
+    return $addr
+}
+
+$Url = "http://$(Get-SageListenAddress):$Port"
 
 function Write-LauncherLog([string]$Message) {
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message"

@@ -85,7 +85,7 @@ New-SageShortcut -Name "Project Sage Streamlit" -ScriptPath $ServerPs1 `
 Write-Host ""
 Write-Host "Desktop shortcuts ready:" -ForegroundColor Green
 Write-Host "  Project Sage            - starts server if needed, opens $Browser --app mode"
-Write-Host "  Project Sage Streamlit  - Streamlit console on http://localhost:8504"
+Write-Host "  Project Sage Streamlit  - Streamlit console on http://10.0.0.201:8504"
 Write-Host ""
 Write-Host "Logo icon: assets\logo.ico"
 Write-Host "Re-run this script anytime to refresh shortcuts/icon."

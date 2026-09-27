@@ -9,6 +9,57 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-09-27 — LAN address 10.0.0.201 and Edge shortcut
+
+**Project:** `proj-sage`
+**When:** 2026-09-27 13:22 PDT
+**Summary:** Project Sage now listens on http://10.0.0.201:8504 so a laptop on the same LAN can open it. A Desktop folder named `Project Sage LAN` holds an Edge app shortcut and a copy of `logo.ico`.
+
+**Details:**
+- Operator asked to stop using RDP for the UI and accepted LAN exposure of the index, which can contain `hyperliquid-bot\.env`.
+- `.streamlit/config.toml` `address` is `10.0.0.201` (CODE-HOUSE Wi-Fi, prefix /24, Private profile `Insane67`). It is not `0.0.0.0`. `http://127.0.0.1:8504` no longer answers.
+- `scripts/start_streamlit.ps1` and `scripts/launch_project_sage.ps1` read that address for the health check. `scripts/show_running.ps1` prints `http://10.0.0.201:8504`.
+- Firewall rule `Project Sage LAN 8504`: inbound TCP 8504, Private profile, remote address LocalSubnet, Allow.
+- `scripts/install_lan_edge_shortcut.ps1` creates Desktop shortcut `Project Sage LAN.lnk` and folder `Desktop\Project Sage LAN\` with `Project Sage.lnk`, `logo.ico` (same file as `assets/logo.ico`), and `desktop.ini`. The shortcut launches Edge `--app=http://10.0.0.201:8504`. The icon path stored in the shortcut is `%USERPROFILE%\Desktop\Project Sage LAN\logo.ico`, so copying that folder onto another Windows Desktop keeps the icon. Edge is resolved from `%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe`.
+- Verified: Uvicorn on `10.0.0.201:8504`, HTTP 200, localhost refused, Edge process command line `--app=http://10.0.0.201:8504`.
+
+**Verify / operate:**
+- From the laptop, on the same LAN, open http://10.0.0.201:8504.
+- Copy the folder `Project Sage LAN` from the CODE-HOUSE Desktop to the laptop Desktop. Keep the folder name. Double-click `Project Sage` inside it.
+- On CODE-HOUSE, the desktop shortcut `Project Sage LAN` opens the same Edge app window.
+- `Get-NetTCPConnection -LocalPort 8504 -State Listen` shows `10.0.0.201`.
+
+**Files:** `.streamlit/config.toml`, `scripts/start_streamlit.ps1`, `scripts/launch_project_sage.ps1`, `scripts/show_running.ps1`, `scripts/install_lan_edge_shortcut.ps1`, `scripts/install_desktop_shortcuts.ps1`, `AGENTS.md`, `STARTUP.md`, `README.md`, `TROUBLESHOOTING.md`, `CODE-HOUSE-HANDOFF.md`
+
+---
+
+## 2026-09-27 — Project Sage running on CODE-HOUSE
+
+**Project:** `proj-sage`
+**When:** 2026-09-27 12:55 PDT
+**Summary:** Project Sage is running on CODE-HOUSE-A7-MAX at http://127.0.0.1:8504. Eleven folder sources are ingested. The three live folders are read from the BOT-HOUSE `SageLive` share. Ollama for this app stays on CODE-HOUSE.
+
+**Details:**
+- `git pull` in `proj-sage` was already up to date. `.venv` was already present (Python 3.12.10) and the requirements imported. The six other git-backed clones were already level with origin.
+- Restored `.streamlit/config.toml` `address` to `127.0.0.1`. A local uncommitted edit had set `10.0.0.201`, which would publish the UI on the LAN. The index includes `hyperliquid-bot\.env`.
+- Ollama at `http://127.0.0.1:11434` already had `qwen2.5:7b` and `nomic-embed-text:latest`.
+- `\\BOT-HOUSE-A7-MAX\SageLive` was already mapped. The NetBIOS name and `10.0.0.200` also listed `coding-notes.jsonl`. The registry uses only the DNS hostname spelling.
+- `data/settings.json` sets watcher auto-start, poll every 120 seconds, and `watcher_fs_observer` `none` (poll-only).
+- The previous local `data/chroma` was moved to `data/chroma_backup_20260927_193405` because `registry.json` had no projects. New index: 109 files, 6155 chunks, 0 failures. File counts match the handoff table: coding-notes 7, hyperliquid-bot 35, rh-agnt-trdg 12, proj-sage 10, demo-sage 2, log-sage 7, net-comd-comp 6, pred-mkt-sage 7, bot-hlth-stat 6, sol-ms-bot 10, brk-out-bot 7.
+- Proof searches: a coding-notes hit cites `\\BOT-HOUSE-A7-MAX\SageLive\coding-notes\...`. A hyperliquid-bot hit for `poll_interval_sec` cites the SageLive UNC path, not the CODE-HOUSE clone. A brk-out-bot hit cites the local `STARTUP.md`. `qwen2.5:7b` answered a question about the breakout golden rules and cited that local file.
+- Listen socket is `127.0.0.1:8504` only. Ports 8501, 8502, and 8503 are stopped on this PC. Desktop shortcuts are on the desktop.
+
+**Verify / operate:**
+- `.\scripts\show_running.ps1` shows Project Sage RUNNING on port 8504.
+- `Get-NetTCPConnection -LocalPort 8504 -State Listen` shows `127.0.0.1`.
+- Sidebar watcher text: `Watching 11 folder source(s) (poll-only (skip venv/node_modules)) · scan every 120s`.
+- Open http://127.0.0.1:8504 or the Project Sage desktop shortcut.
+- Leave port 8504 stopped on BOT-HOUSE.
+
+**Files:** `data/settings.json`, `data/registry.json`, `.streamlit/config.toml`, `STARTUP.md`, `README.md`
+
+---
+
 ## 2026-09-27 — SageLive share created (New-SmbShare needs elevation)
 
 **Project:** `proj-sage`

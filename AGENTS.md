@@ -26,7 +26,7 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 | Data | `data/` (registry, chroma, uploads) — **gitignored**, never commit |
 | Branding | `assets/logo.jpg` (UI), `assets/logo.ico` (shortcuts) |
 | Where it runs | **CODE-HOUSE** (see `CODE-HOUSE-HANDOFF.md`). Leave :8504 stopped on BOT-HOUSE. |
-| Bind | `127.0.0.1:8504` only (`.streamlit/config.toml`). Index may contain `hyperliquid-bot\.env`. |
+| Bind | **`10.0.0.201:8504`** (CODE-HOUSE Wi-Fi, Private). Operator requested LAN access on 2026-09-27. Do not rebind to `127.0.0.1` or `0.0.0.0` unless they ask. Index may contain `hyperliquid-bot\.env`. Ollama stays on `127.0.0.1:11434`. |
 
 - Work from `proj-sage/` for pip, tests, and Streamlit.
 - Use `.venv\Scripts\python.exe` / `streamlit.exe`.

@@ -17,10 +17,11 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1 -
 
 | Desktop shortcut | What it does |
 |------------------|--------------|
-| **Project Sage** | Starts Streamlit if needed, ensures Ollama is up, opens Chrome/Edge in `--app` mode (desktop web app, no browser tabs) at http://localhost:8504 |
+| **Project Sage** | Starts Streamlit if needed, ensures Ollama is up, opens Chrome/Edge in `--app` mode (desktop web app, no browser tabs) at http://10.0.0.201:8504 |
+| **Project Sage LAN** | Opens Microsoft Edge in `--app` mode at http://10.0.0.201:8504. Copy the Desktop folder `Project Sage LAN` (shortcut + `logo.ico`) to a laptop Desktop to keep the icon. |
 | **Project Sage Streamlit** | Streamlit server console — **keep this window open** while using the app |
 
-Both shortcuts use the Project Sage logo (`assets/logo.ico`).
+These shortcuts use the Project Sage logo (`assets/logo.ico`). The LAN shortcut keeps its own copy of that icon in the Desktop folder `Project Sage LAN`.
 
 ## Manual run
 
@@ -31,14 +32,14 @@ streamlit run app.py
 # uses port 8504 from .streamlit/config.toml (or: --server.port 8504)
 ```
 
-Then open http://localhost:8504, or as a desktop app:
+Then open http://10.0.0.201:8504, or as a desktop app:
 
 ```powershell
 # Chrome
-& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --app=http://localhost:8504
+& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --app=http://10.0.0.201:8504
 
 # Edge
-& "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" --app=http://localhost:8504
+& "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" --app=http://10.0.0.201:8504
 ```
 
 ## Prerequisites
@@ -46,13 +47,21 @@ Then open http://localhost:8504, or as a desktop app:
 1. `.venv` installed (`pip install -r requirements.txt`)
 2. Ollama running with `qwen2.5:7b` and `nomic-embed-text`
 3. Port **8504** free (local map: 8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp)
-4. UI listens on **127.0.0.1** only (`.streamlit/config.toml` `address`). The index can contain `hyperliquid-bot\.env`.
+4. UI listens on **10.0.0.201** (`.streamlit/config.toml` `address`). The index can contain `hyperliquid-bot\.env`. That bind is intentional so a laptop on the LAN can open http://10.0.0.201:8504.
 
 ## CODE-HOUSE (run Sage here, not on BOT-HOUSE)
 
 Project Sage's Ollama work is heavy next to the live bots. Run the Streamlit app on **CODE-HOUSE-A7-MAX** and leave port 8504 stopped on BOT-HOUSE.
 
 Procedure for the CODE-HOUSE agent: **[CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md)**.
+
+Brought up on this PC on 2026-09-27. Eleven folder sources are ingested. The UI listens on http://10.0.0.201:8504. The watcher is poll-only, scan every 120 seconds. Leave port 8504 stopped on BOT-HOUSE.
+
+LAN Edge shortcut (icon travels with the folder):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_lan_edge_shortcut.ps1
+```
 
 Share only these BOT-HOUSE folders (read-only SMB share `SageLive`):
 

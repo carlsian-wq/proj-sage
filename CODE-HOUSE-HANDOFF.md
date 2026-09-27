@@ -101,7 +101,7 @@ If a clone is missing, stop and tell the user. Do not substitute the BOT-HOUSE c
 
 ## What Sage indexes
 
-Extensions: `.txt`, `.md`, `.markdown`, `.pdf`, `.csv`, `.json`, `.jsonl`, `.yaml`, `.yml`, `.env`, `.doc`, `.docx`.
+Extensions: `.txt`, `.md`, `.markdown`, `.pdf`, `.csv`, `.json`, `.jsonl`, `.yaml`, `.yml`, `.env`, `.doc`, `.docx`, 'xlsx'.
 
 Not indexed: `.py`, `.log`, anything under `logs`, `data`, `venv`, `.venv`, `env`, `node_modules`, `.git`, `backtest_results`, `archive`, `exports`, `_archive`, or a directory whose name starts with `.`.
 
@@ -223,19 +223,21 @@ python -m venv .venv
 
 ---
 
-## Step 2 — bind the UI to localhost
+## Step 2 — bind the UI to the CODE-HOUSE LAN address
 
 `.streamlit\config.toml` should contain:
 
 ```toml
 [server]
 port = 8504
-address = "127.0.0.1"
+address = "10.0.0.201"
 headless = true
 fileWatcherType = "none"
 ```
 
-The repo on BOT-HOUSE was updated 2026-09-27 to set `address = "127.0.0.1"`. After `git pull`, confirm the line is present. The Streamlit default with no address is `0.0.0.0` (this install binds IPv6 `::`), which would publish an index that contains `hyperliquid-bot\.env`.
+**Operator override (2026-09-27):** bind `10.0.0.201` (this PC's Wi-Fi address), not `127.0.0.1` and not `0.0.0.0`. The operator asked for laptop access at http://10.0.0.201:8504 and accepted that the index can contain `hyperliquid-bot\.env`. Do not change the address back unless they ask. Ollama stays on `127.0.0.1:11434`.
+
+The Streamlit default with no address is `0.0.0.0` (this install binds IPv6 `::`). A wildcard bind is wider than the operator asked for.
 
 Keep `fileWatcherType = "none"`. That setting is Streamlit's own reload watcher. Document ingest is `sage/watcher.py`.
 
@@ -279,7 +281,7 @@ cd C:\Users\c_sia\Documents\GitHub\proj-sage
 .\scripts\start_streamlit.ps1
 ```
 
-Open `http://127.0.0.1:8504`. In the sidebar, add each folder once. The default tag is the leaf folder name. Leave "Attach to active project" unchecked. Tags must match the table exactly.
+Open `http://10.0.0.201:8504`. In the sidebar, add each folder once. The default tag is the leaf folder name. Leave "Attach to active project" unchecked. Tags must match the table exactly.
 
 | Tag | Folder to add |
 | --- | --- |
@@ -329,7 +331,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 
 ## Step 5 — prove it
 
-1. `.\scripts\show_running.ps1` shows Project Sage **RUNNING** on port 8504. Listen address is `127.0.0.1` only (`Get-NetTCPConnection -LocalPort 8504 -State Listen`).
+1. `.\scripts\show_running.ps1` shows Project Sage **RUNNING** on port 8504. Listen address is `10.0.0.201` (`Get-NetTCPConnection -LocalPort 8504 -State Listen`).
 2. Sidebar watcher line says poll-only, 11 folder sources (or the count of folders that actually resolved).
 3. Search filtered to `coding-notes` for a phrase you can see in `coding-notes.jsonl` (a project name such as `hyperliquid-bot` is enough). The cited path starts with the UNC share.
 4. Search filtered to `hyperliquid-bot` for `poll_interval_sec` or `engine_state`. The cited path is the UNC share, not `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot` on CODE-HOUSE.
@@ -348,7 +350,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 - Do not commit `data\`, `.env`, or `.venv`.
 - Do not edit files on the SageLive share. It is a read-only view of the running host. Log Sage is mid-write on `coding-notes.jsonl` every couple of minutes. A poll that hits a torn write should fail that file and succeed on the next scan. Do not "fix" a single torn read by copying the JSONL into the clone.
 - Do not disable Hotspot Shield on BOT-HOUSE.
-- Do not expose port 8504 past `127.0.0.1`.
+- Keep port 8504 on `10.0.0.201` (operator override, 2026-09-27). Do not bind `0.0.0.0`. Do not move it back to `127.0.0.1` unless the operator asks.
 
 ---
 

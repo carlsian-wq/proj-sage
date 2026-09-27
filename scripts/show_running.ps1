@@ -64,10 +64,25 @@ Write-Host "  Streamlit apps on this PC (one row = one app)" -ForegroundColor Cy
 Write-Host "  ---------------------------------------------" -ForegroundColor DarkGray
 Write-Host ""
 
+function Get-SageUiUrl([int]$Port) {
+    if ($Port -ne 8504) { return "http://localhost:$Port" }
+    $cfg = Join-Path (Split-Path -Parent $PSScriptRoot) ".streamlit\config.toml"
+    $addr = "10.0.0.201"
+    if (Test-Path -LiteralPath $cfg) {
+        foreach ($line in Get-Content -LiteralPath $cfg) {
+            if ($line -match '^\s*address\s*=\s*"([^"]+)"') {
+                $addr = $Matches[1]
+                break
+            }
+        }
+    }
+    return "http://${addr}:$Port"
+}
+
 $running = 0
 foreach ($app in $Apps) {
     $listenPid = Get-ListenPid $app.Port
-    $url = "http://localhost:$($app.Port)"
+    $url = Get-SageUiUrl $app.Port
     if ($listenPid -gt 0) {
         $running++
         Write-Host ("  :{0}  {1,-22} RUNNING   PID {2}" -f $app.Port, $app.Label, $listenPid) -ForegroundColor Green

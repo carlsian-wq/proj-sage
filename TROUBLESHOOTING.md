@@ -11,7 +11,9 @@ Quick fixes for the Streamlit desktop apps on this PC. For first-time setup and 
 | **8501** | hyperliquid-bot — Trading dashboard | hyperliquid-bot `launch.ps1 dashboard` | Close its Streamlit console |
 | **8502** | log-sage — Log Sage | log-sage desktop shortcut | `log-sage\scripts\stop_log_sage.ps1` |
 | **8503** | net-comd-comp | net-comd-comp Streamlit console | Close its Streamlit console |
-| **8504** | **Project Sage** | **Project Sage Streamlit** shortcut | `.\scripts\stop_project_sage.ps1` |
+| **8504** | **Project Sage** (CODE-HOUSE, `10.0.0.201`) | **Project Sage Streamlit** shortcut | `.\scripts\stop_project_sage.ps1` |
+
+Laptop cannot open http://10.0.0.201:8504: confirm this PC is on Wi-Fi `10.0.0.201`, Streamlit is RUNNING, and Windows Firewall allows inbound TCP **8504** on the Private profile from the local subnet. The rule name is `Project Sage LAN 8504`. `http://127.0.0.1:8504` does not answer while the app is bound to `10.0.0.201`.
 
 ---
 

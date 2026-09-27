@@ -43,8 +43,9 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 
 | Shortcut | Purpose |
 |----------|---------|
-| **Project Sage** | Start server if needed → open as desktop web app (`--app=http://localhost:8504`) |
+| **Project Sage** | Start server if needed → open as desktop web app (`--app=http://10.0.0.201:8504`) |
 | **Project Sage Streamlit** | Streamlit console only |
+| **Project Sage LAN** | Edge `--app` window at http://10.0.0.201:8504. The Desktop folder `Project Sage LAN` holds `logo.ico` with the shortcut. |
 
 Details: [STARTUP.md](STARTUP.md). Problems: [TROUBLESHOOTING.md](TROUBLESHOOTING.md) (`show_running.ps1 -Details` for PID chains).
 
@@ -54,9 +55,9 @@ Details: [STARTUP.md](STARTUP.md). Problems: [TROUBLESHOOTING.md](TROUBLESHOOTIN
 .\.venv\Scripts\streamlit run app.py
 ```
 
-Open the URL Streamlit prints (http://127.0.0.1:8504). The server is bound to localhost.
+Open http://10.0.0.201:8504. The server is bound to that CODE-HOUSE Wi-Fi address so a laptop on the same LAN can open it. The index can contain `hyperliquid-bot\.env`.
 
-To run this app on CODE-HOUSE and read BOT-HOUSE live folders over the LAN, follow [CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md). Do not run a second copy on BOT-HOUSE.
+To run this app on CODE-HOUSE and read BOT-HOUSE live folders over the LAN, follow [CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md). Do not run a second copy on BOT-HOUSE. As of 2026-09-27 the app is running on CODE-HOUSE at http://10.0.0.201:8504 with the eleven handoff folder sources.
 
 ## How to use
 
