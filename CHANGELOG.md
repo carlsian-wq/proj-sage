@@ -9,6 +9,51 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-09-27 — SageLive share created (New-SmbShare needs elevation)
+
+**Project:** `proj-sage`
+**When:** 2026-09-27 11:49 PDT
+**Summary:** The read-only `SageLive` share is up on BOT-HOUSE. The first `New-SmbShare` failed with `Access is denied` because the PowerShell window was not elevated. UAC filters the administrator token even for `c_sia`.
+
+**Details:**
+- Junctions under `C:\Users\c_sia\Documents\SageLive` were already created by the non-elevated script: `coding-notes`, `hyperliquid-bot`, `rh-agnt-trdg`.
+- Elevated `New-SmbShare -Name SageLive -ReadAccess c_sia` succeeded. ACL is `BOT-HOUSE-A7-MA\c_sia` Allow Read. No Everyone entry.
+- Windows NetBIOS name is `BOT-HOUSE-A7-MA` (15 characters). DNS hostname remains `BOT-HOUSE-A7-MAX`. Share login from CODE-HOUSE is `BOT-HOUSE-A7-MA\c_sia`.
+- Local UNC checks succeeded for `coding-notes.jsonl`, `hyperliquid-bot\config.yaml`, and `rh-agnt-trdg\rh_agnt_trdg_state.json`, including through the junctions.
+- Wi-Fi `Insane67` is Private and File and Printer Sharing (SMB-In) is allowed on Private.
+
+**Verify / operate:**
+- `Get-SmbShare -Name SageLive` shows path `C:\Users\c_sia\Documents\SageLive`.
+- From CODE-HOUSE: `Get-ChildItem \\BOT-HOUSE-A7-MAX\SageLive\coding-notes\coding-notes.jsonl` (fallback `\\BOT-HOUSE-A7-MA\...` or `\\10.0.0.200\...`).
+- `net use \\BOT-HOUSE-A7-MAX\SageLive /user:BOT-HOUSE-A7-MA\c_sia /persistent:yes`
+
+**Files:** `CODE-HOUSE-HANDOFF.md`, `CHANGELOG.md`
+
+---
+
+## 2026-09-27 — CODE-HOUSE handoff for live-folder SMB ingest
+
+**Project:** `proj-sage`
+**When:** 2026-09-27 11:35 PDT
+**Summary:** Project Sage should run on CODE-HOUSE so Ollama stops competing with the BOT-HOUSE trading engines. A handoff lists the three BOT-HOUSE folders that must be shared read-only, and the git-tracked repos that stay as local clones. Streamlit now binds to 127.0.0.1 because the index can contain hyperliquid-bot `.env`.
+
+**Details:**
+- Measured the live registry (11 folder sources) and walked them with `sage/loaders.py` skip rules. About 108 supported files, about 6 MB of text. Python, `logs\`, and `data\` journals are not indexed.
+- Must share from BOT-HOUSE: `coding-notes` (not a git repo; `coding-notes.jsonl` is rewritten by Log Sage every ~120s), `hyperliquid-bot` (gitignored engine state JSON plus root `.env`; `liquidity_trend.json` was dirty), `rh-agnt-trdg` (`rh_agnt_trdg_state.json`).
+- Fully git-tracked and level with origin on this date, so CODE-HOUSE clones are enough: `proj-sage`, `sample_docs` (`demo-sage`), `log-sage`, `net-comd-comp`, `pred-mkt-sage`, `bot-hlth-stat`, `sol-ms-bot`, `brk-out-bot`.
+- Do not copy `data\chroma` or `registry.json`. Chunk ids embed the absolute path. One spelling of each UNC path.
+- `.streamlit/config.toml` sets `address = "127.0.0.1"`. The previous default listened on all interfaces.
+- Port 8504 was not listening on BOT-HOUSE at measurement time. Ollama on BOT-HOUSE stays for Log Sage. CODE-HOUSE runs its own Ollama.
+
+**Verify / operate:**
+- On BOT-HOUSE, create the read-only `SageLive` share as written in `CODE-HOUSE-HANDOFF.md`.
+- On CODE-HOUSE, `git pull`, confirm `address = "127.0.0.1"`, install `.venv`, `ollama pull qwen2.5:7b` and `nomic-embed-text`, add the eleven folder sources, Force ingest.
+- `Get-NetTCPConnection -LocalPort 8504` shows 127.0.0.1. Watcher status says poll-only. A coding-notes hit cites the UNC path.
+
+**Files:** `CODE-HOUSE-HANDOFF.md`, `.streamlit/config.toml`, `STARTUP.md`, `README.md`, `AGENTS.md`, `CHANGELOG.md`
+
+---
+
 ## 2026-08-01 — Add folder source no longer kills Streamlit (Chroma race)
 
 **Project:** `proj-sage`

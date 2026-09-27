@@ -54,7 +54,9 @@ Details: [STARTUP.md](STARTUP.md). Problems: [TROUBLESHOOTING.md](TROUBLESHOOTIN
 .\.venv\Scripts\streamlit run app.py
 ```
 
-Open the URL Streamlit prints (usually http://localhost:8504).
+Open the URL Streamlit prints (http://127.0.0.1:8504). The server is bound to localhost.
+
+To run this app on CODE-HOUSE and read BOT-HOUSE live folders over the LAN, follow [CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md). Do not run a second copy on BOT-HOUSE.
 
 ## How to use
 

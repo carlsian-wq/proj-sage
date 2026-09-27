@@ -46,6 +46,23 @@ Then open http://localhost:8504, or as a desktop app:
 1. `.venv` installed (`pip install -r requirements.txt`)
 2. Ollama running with `qwen2.5:7b` and `nomic-embed-text`
 3. Port **8504** free (local map: 8501 hyperliquid-bot, 8502 log-sage, 8503 net-comd-comp)
+4. UI listens on **127.0.0.1** only (`.streamlit/config.toml` `address`). The index can contain `hyperliquid-bot\.env`.
+
+## CODE-HOUSE (run Sage here, not on BOT-HOUSE)
+
+Project Sage's Ollama work is heavy next to the live bots. Run the Streamlit app on **CODE-HOUSE-A7-MAX** and leave port 8504 stopped on BOT-HOUSE.
+
+Procedure for the CODE-HOUSE agent: **[CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md)**.
+
+Share only these BOT-HOUSE folders (read-only SMB share `SageLive`):
+
+| Folder on BOT-HOUSE | Why |
+| --- | --- |
+| `Documents\GitHub\coding-notes` | Not in git. Live `coding-notes.jsonl` from Log Sage. |
+| `Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. |
+| `Documents\GitHub\rh-agnt-trdg` | Gitignored `rh_agnt_trdg_state.json`. |
+
+Other registered projects are git-tracked. Point those tags at the CODE-HOUSE clones. Do not copy `proj-sage\data\` (Chroma) between machines.
 
 ## Project tags
 

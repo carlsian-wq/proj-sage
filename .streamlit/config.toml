@@ -3,6 +3,9 @@
 
 [server]
 port = 8504
+# Wildcard bind would publish the UI on the LAN. The index can contain
+# hyperliquid-bot\.env and coding-notes text. Keep the app on this PC only.
+address = "127.0.0.1"
 headless = true
 # Streamlit SOURCE watcher only (app.py hot-reload) — NOT document auto-ingest.
 # Project folder ingest is sage/watcher.py (poll-only on Windows). Keep this "none"
