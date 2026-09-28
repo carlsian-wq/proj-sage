@@ -46,7 +46,9 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 7. **Clear Search** — clear widget state via a flag before the text_area is created (never mutate `search_query` after the widget instantiates).
 8. **Chroma docs may be null** — coerce hit text before `.strip()`.
 9. **“Error finding id” on search** = corrupted Chroma HNSW (not Ollama). Stop app → `scripts/rebuild_chroma.py` → restart. Do not re-ingest while Streamlit is open.
-10. **Hybrid retrieval** — do not regress pure-embedding-only ranking for answers. Search path is `vectorstore.query` over-fetch → `sage/rerank.py` lexical/path boosts → TOP_K → grounded LLM (`sage/rag.py`). Prompt must forbid inventing flags and swapping related concepts (regime ≠ interval).
+10. **Hybrid retrieval** — do not regress pure-embedding-only ranking for answers. Search path is `vectorstore.query` over-fetch → `sage/rerank.py` lexical/path boosts → TOP_K → grounded LLM (`sage/rag.py`). Prompt must forbid inventing flags and swapping related concepts (regime ≠ interval). If excerpts disagree, prefer `OPERATIONS.md` over CHANGELOG or older RUNNING.md tables.
+11. **Engine tags** — `live-engine`, `swing-engine`, `brk-out-engine`, and `rh-agnt-engine` are separate folder sources under each repo's `sage-docs/`. Do not merge them back into `hyperliquid-bot`. `sage-docs` is a skipped directory on parent walks. `rhc_` files and `RHCREADME.md` / `RHCSETUP.md` stay out of the index.
+12. **Status apps** — tags `bot-hlth-stat` (BOT-HOUSE :8507), `code-house-stat` (CODE-HOUSE :8507), and `log-sage` (:8502). Their current spec is each repo's root `OPERATIONS.md`. Do not register `net-comd-comp`, `pred-mkt-sage`, or `sol-ms-bot` again unless the operator reopens them.
 
 ---
 

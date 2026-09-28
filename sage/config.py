@@ -55,7 +55,15 @@ SKIP_FILE_NAMES = {
     "coding_notes_status.json",
     "export_status.json",
     "cache_meta.json",
+    # Robinhood Chain engine is dormant. Keep it out of the hyperliquid-bot tag.
+    "RHCREADME.md",
+    "RHCSETUP.md",
 }
+
+# Filename prefixes to skip (case-insensitive). rhc_ is the dormant Chain engine.
+SKIP_FILE_PREFIXES = (
+    "rhc_",
+)
 
 # Filename substrings that mark backups / archives (not live corpus)
 SKIP_FILE_SUBSTRINGS = (
@@ -103,6 +111,8 @@ SKIP_DIR_NAMES = {
     # log-sage/exports holds legacy exports; coding-notes hub has _archive/
     "exports",
     "_archive",
+    # Engine current-spec folders are registered as their own Sage tags.
+    "sage-docs",
 }
 
 

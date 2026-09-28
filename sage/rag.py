@@ -32,6 +32,12 @@ Rules:
 - Cite sources inline like [1], [2] matching the excerpt numbers.
 - Prefer short paragraphs and bullet lists when helpful.
 - If multiple projects appear, note which project each point comes from.
+- If excerpts disagree, quote the file named OPERATIONS.md. Treat CHANGELOG.md and
+  older tables in RUNNING.md as history, not the current knob, unless OPERATIONS.md
+  is absent.
+- When the question asks how a trade is opened or which gates run, list every numbered
+  gate from the excerpts, including gates that are off. Include each gate's config key
+  and current number. Do not replace a number with the words "specific parameters".
 """
 
 

@@ -9,6 +9,28 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-09-27 — Engine tags, status apps, and a trim of shelved projects
+
+**Project:** `proj-sage`
+**When:** 2026-09-27 17:46 PDT
+**Summary:** Project Sage can filter live, swing, breakout, and Robinhood equities as their own tags. code-house-stat is indexed. Shelved projects and the dormant Robinhood Chain files are out of the index. Conflicting trail notes lose to each engine's OPERATIONS.md.
+
+**Details:**
+- New tags point at CODE-HOUSE `sage-docs` folders: `live-engine`, `swing-engine`, `brk-out-engine`, `rh-agnt-engine`. Parent walks skip the directory name `sage-docs`, so the UNC `hyperliquid-bot` tag does not index those guides twice.
+- `code-house-stat` is a folder source. `bot-hlth-stat` and `log-sage` pick up a root `OPERATIONS.md` on ingest.
+- Removed tags `net-comd-comp`, `pred-mkt-sage`, and `sol-ms-bot`. The git repos stay on disk.
+- Files named `rhc_*`, `RHCREADME.md`, and `RHCSETUP.md` are skipped. Existing Chain chunks were deleted from the `hyperliquid-bot` tag.
+- `sage/rag.py` tells the model to prefer OPERATIONS.md when excerpts disagree.
+
+**Verify / operate:**
+- Filter `live-engine` and ask how live_engine.py opens a trade, and what the trail percentage is after the trail is armed. Expect trail_pct 0.45, not 0.70.
+- Filter `swing-engine` and ask the trail question. Expect trail_atr_mult 0.45 after trail_after_r 0.7.
+- The selector lists `code-house-stat`, `bot-hlth-stat`, and `log-sage`, and does not list the three removed tags.
+
+**Files:** `sage/config.py`, `sage/loaders.py`, `sage/rag.py`, `AGENTS.md`
+
+---
+
 ## 2026-09-27 — LAN address 10.0.0.201 and Edge shortcut
 
 **Project:** `proj-sage`
