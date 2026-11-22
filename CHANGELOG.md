@@ -9,6 +9,31 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-11-21 — Remove rh-agnt-trdg and rh-agnt-engine from Project Sage
+
+**Project:** `proj-sage`
+**When:** 2026-11-21 16:04 PST
+**Summary:** The Project Sage sidebar no longer offers `rh-agnt-trdg` or `rh-agnt-engine`. Their folder paths are gone from the registry, and their chunks are gone from Chroma.
+
+**Details:**
+- Removed the `rh-agnt-trdg` folder source `\\BOT-HOUSE-A7-MAX\SageLive\rh-agnt-trdg` (12 files, 84 chunks).
+- Removed the `rh-agnt-engine` folder source `C:\Users\c_sia\Documents\GitHub\rh-agnt-trdg\sage-docs\rh-agnt-engine` (1 file, 4 chunks).
+- No upload files were stored for either tag. Chunks under other tags did not use those paths.
+- `AGENTS.md`, `STARTUP.md`, `README.md`, and `CODE-HOUSE-HANDOFF.md` no longer tell a later setup to add those folders.
+- The git repos were not deleted. A leftover SageLive junction on BOT-HOUSE is not a Project Sage source.
+- Re-embedding those edited docs failed. Ollama 0.34.0 is running, but `llama-server.exe` is missing from `AppData\Local\Programs\Ollama`, so the embed call returns HTTP 500. The old chunks of those five files stay in Chroma until an embed succeeds. The removed project tags themselves have 0 chunks.
+
+**Verify / operate:**
+- Streamlit was restarted on http://10.0.0.201:8504. Hard-refresh if a tab was already open.
+- Active project and Filter by project tag must not list `rh-agnt-trdg` or `rh-agnt-engine`.
+- Sidebar watcher text should report 11 folder sources, poll-only, scan every 120s.
+- Indexed chunks for either removed tag should be 0.
+- After Ollama can embed again, force-ingest the `proj-sage` tag so search picks up the edited docs.
+
+**Files:** `data/registry.json`, `AGENTS.md`, `STARTUP.md`, `README.md`, `CODE-HOUSE-HANDOFF.md`
+
+---
+
 ## 2026-09-27 — Engine tags, status apps, and a trim of shelved projects
 
 **Project:** `proj-sage`

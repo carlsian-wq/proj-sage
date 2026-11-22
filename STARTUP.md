@@ -55,7 +55,7 @@ Project Sage's Ollama work is heavy next to the live bots. Run the Streamlit app
 
 Procedure for the CODE-HOUSE agent: **[CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md)**.
 
-Brought up on this PC on 2026-09-27. Eleven folder sources are ingested. The UI listens on http://10.0.0.201:8504. The watcher is poll-only, scan every 120 seconds. Leave port 8504 stopped on BOT-HOUSE.
+Brought up on this PC on 2026-09-27. The UI listens on http://10.0.0.201:8504. The watcher is poll-only, scan every 120 seconds. Leave port 8504 stopped on BOT-HOUSE. As of 2026-11-21 the registry has 11 folder sources. Do not add `rh-agnt-trdg` or `rh-agnt-engine`.
 
 LAN Edge shortcut (icon travels with the folder):
 
@@ -69,7 +69,6 @@ Share only these BOT-HOUSE folders (read-only SMB share `SageLive`):
 | --- | --- |
 | `Documents\GitHub\coding-notes` | Not in git. Live `coding-notes.jsonl` from Log Sage. |
 | `Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. |
-| `Documents\GitHub\rh-agnt-trdg` | Gitignored `rh_agnt_trdg_state.json`. |
 
 Other registered projects are git-tracked. Point those tags at the CODE-HOUSE clones. Do not copy `proj-sage\data\` (Chroma) between machines.
 

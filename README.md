@@ -57,7 +57,7 @@ Details: [STARTUP.md](STARTUP.md). Problems: [TROUBLESHOOTING.md](TROUBLESHOOTIN
 
 Open http://10.0.0.201:8504. The server is bound to that CODE-HOUSE Wi-Fi address so a laptop on the same LAN can open it. The index can contain `hyperliquid-bot\.env`.
 
-To run this app on CODE-HOUSE and read BOT-HOUSE live folders over the LAN, follow [CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md). Do not run a second copy on BOT-HOUSE. As of 2026-09-27 the app is running on CODE-HOUSE at http://10.0.0.201:8504 with the eleven handoff folder sources.
+To run this app on CODE-HOUSE and read BOT-HOUSE live folders over the LAN, follow [CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md). Do not run a second copy on BOT-HOUSE. The app runs on CODE-HOUSE at http://10.0.0.201:8504. Folder sources are the tags in `data/registry.json`. Do not add `rh-agnt-trdg` or `rh-agnt-engine`.
 
 ## How to use
 
