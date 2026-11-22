@@ -9,6 +9,46 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-11-21 — One Python app is two processes
+
+**Project:** `proj-sage`
+**When:** 2026-11-21 16:22 PST
+**Summary:** Agents must treat the PowerShell console plus the venv Python launcher and its Python 3.12 child as one Project Sage. That pair is not two servers.
+
+**Details:**
+- Workspace `AGENTS.md` now states the Windows process tree for every Python app in this folder. `proj-sage/AGENTS.md` rule 14 applies it to port 8504.
+- `pwsh.exe` or `powershell.exe` is the console. `.venv\Scripts\python.exe` is the small launcher. The child `Python312\python.exe` runs Streamlit and owns the port.
+- A second app is a second listener, or a second venv launcher that is not the parent of the first.
+
+**Verify / operate:**
+- `.\scripts\show_running.ps1 -Details` prints one chain for port 8504.
+- Do not kill the launcher or the child to clean up a duplicate.
+
+**Files:** `AGENTS.md`, workspace `AGENTS.md`
+
+---
+
+## 2026-11-21 — Start Project Sage in a visible PowerShell 7 window
+
+**Project:** `proj-sage`
+**When:** 2026-11-21 16:20 PST
+**Summary:** Agents must start the Project Sage dashboard in a visible PowerShell 7 window titled Project Sage, so the operator can watch errors. A hidden agent background shell is not a valid start.
+
+**Details:**
+- `AGENTS.md` now says to open that window with `Win32_Process.Create` and `cmd /c start "Project Sage"`, using the installed `pwsh.exe` under `C:\Program Files\WindowsApps\Microsoft.PowerShell_*`.
+- `Start-Process` from the agent tool shell is not enough. That shell is hidden, and the job kills the console when the tool command ends. Streamlit can keep listening with nobody watching it.
+- The WindowsApps execution alias `pwsh.exe` fails under WMI (return value 8). Windows PowerShell 5.1 is not the agent launch path. The desktop shortcut **Project Sage Streamlit** still uses 5.1.
+- `data/streamlit.log` remains a copy of the console, not a substitute for the window.
+
+**Verify / operate:**
+- A Windows Terminal window or tab titled **Project Sage** should be open, running `scripts\start_streamlit.ps1` under PowerShell 7.
+- http://10.0.0.201:8504 answers.
+- Leave that window open while using the dashboard.
+
+**Files:** `AGENTS.md`, `STARTUP.md`
+
+---
+
 ## 2026-11-21 — Remove rh-agnt-trdg and rh-agnt-engine from Project Sage
 
 **Project:** `proj-sage`

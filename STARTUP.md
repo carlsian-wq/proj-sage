@@ -19,7 +19,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1 -
 |------------------|--------------|
 | **Project Sage** | Starts Streamlit if needed, ensures Ollama is up, opens Chrome/Edge in `--app` mode (desktop web app, no browser tabs) at http://10.0.0.201:8504 |
 | **Project Sage LAN** | Opens Microsoft Edge in `--app` mode at http://10.0.0.201:8504. Copy the Desktop folder `Project Sage LAN` (shortcut + `logo.ico`) to a laptop Desktop to keep the icon. |
-| **Project Sage Streamlit** | Streamlit server console — **keep this window open** while using the app |
+| **Project Sage Streamlit** | Visible Streamlit server console. Keep this window open while using the app. Agents start it with PowerShell 7 (`pwsh`), not a hidden background process. |
 
 These shortcuts use the Project Sage logo (`assets/logo.ico`). The LAN shortcut keeps its own copy of that icon in the Desktop folder `Project Sage LAN`.
 

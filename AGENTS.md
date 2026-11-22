@@ -32,6 +32,18 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 - Use `.venv\Scripts\python.exe` / `streamlit.exe`.
 - Status ports: `scripts/show_running.ps1`. Stop: `scripts/stop_project_sage.ps1`.
 - Desktop shortcuts: `scripts/install_desktop_shortcuts.ps1`.
+- **Visible console (required).** Start and restart the dashboard in a visible PowerShell 7 window so the operator can watch errors. Do not run `scripts\start_streamlit.ps1` inside the agent tool shell, including a background job. That shell is hidden. When the tool command ends, the job kills the console and can leave Streamlit running with nobody watching it.
+- Do not use `Start-Process` from the agent shell for this. Create the process with `Win32_Process.Create` so the parent is `WmiPrvSE`, not the agent job. Use `cmd /c start "Project Sage"` and the installed `pwsh.exe` under `C:\Program Files\WindowsApps\Microsoft.PowerShell_*`. Do not use the `WindowsApps` execution alias (`...\Microsoft.PowerShell_8wekyb3d8bbwe\pwsh.exe`): WMI cannot start it (return value 8). Do not use Windows PowerShell 5.1 (`powershell.exe`).
+- Leave that **Project Sage** window open while the app runs. `data/streamlit.log` is a copy of the console, not a substitute for it. The desktop shortcut **Project Sage Streamlit** is also a visible console, but it launches Windows PowerShell 5.1. Agents use PowerShell 7.
+
+  ```powershell
+  $pwshExe = (Get-ChildItem 'C:\Program Files\WindowsApps\Microsoft.PowerShell_*\pwsh.exe' | Select-Object -First 1).FullName
+  $script = 'C:\Users\c_sia\Documents\GitHub\proj-sage\scripts\start_streamlit.ps1'
+  $cmdLine = 'C:\Windows\System32\cmd.exe /c start "Project Sage" "' + $pwshExe + '" -NoExit -NoProfile -ExecutionPolicy Bypass -WorkingDirectory "C:\Users\c_sia\Documents\GitHub\proj-sage" -File "' + $script + '"'
+  Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmdLine; CurrentDirectory = 'C:\Users\c_sia\Documents\GitHub\proj-sage' }
+  ```
+
+  `ReturnValue` 0 means the window was created. Stop an old server with `scripts\stop_project_sage.ps1` before starting a new one.
 
 ---
 
@@ -49,6 +61,8 @@ Bot-only: operational rules for coding agents. Human product docs: `README.md`, 
 10. **Hybrid retrieval** — do not regress pure-embedding-only ranking for answers. Search path is `vectorstore.query` over-fetch → `sage/rerank.py` lexical/path boosts → TOP_K → grounded LLM (`sage/rag.py`). Prompt must forbid inventing flags and swapping related concepts (regime ≠ interval). If excerpts disagree, prefer `OPERATIONS.md` over CHANGELOG or older RUNNING.md tables.
 11. **Engine tags** — `live-engine`, `swing-engine`, and `brk-out-engine` are separate folder sources under each repo's `sage-docs/`. Do not merge them back into `hyperliquid-bot`. `sage-docs` is a skipped directory on parent walks. `rhc_` files and `RHCREADME.md` / `RHCSETUP.md` stay out of the index.
 12. **Status apps** — tags `bot-hlth-stat` (BOT-HOUSE :8507), `code-house-stat` (CODE-HOUSE :8507), and `log-sage` (:8502). Their current spec is each repo's root `OPERATIONS.md`. Do not register `net-comd-comp`, `pred-mkt-sage`, `sol-ms-bot`, `rh-agnt-trdg`, or `rh-agnt-engine` again unless the operator reopens them.
+13. **Visible PowerShell 7 console** — The operator monitors Project Sage from a visible window titled **Project Sage**. Agents open it with `Win32_Process.Create`, `cmd /c start "Project Sage"`, and installed `pwsh.exe` (see Environment). Never attach the server to an agent background shell.
+14. **One app, two processes** — The PowerShell console and a second `python.exe` are normal. `.venv\Scripts\python.exe` is a launcher; its child is `Python312\python.exe` with the same `streamlit` command. The child owns port 8504. Do not investigate this pair or kill one of them. A second Project Sage is a second listener on 8504, or a second venv launcher that is not the parent of the first. Workspace rule: root `AGENTS.md`, "One Python app, two processes".
 
 ---
 
