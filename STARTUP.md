@@ -63,14 +63,17 @@ LAN Edge shortcut (icon travels with the folder):
 powershell -ExecutionPolicy Bypass -File scripts\install_lan_edge_shortcut.ps1
 ```
 
-Share only these BOT-HOUSE folders (read-only SMB share `SageLive`):
+Share these BOT-HOUSE folders (read-only SMB share `SageLive`). Register each tag at `\\BOT-HOUSE-A7-MAX\SageLive\<folder>` and do not also register the CODE-HOUSE clone.
 
 | Folder on BOT-HOUSE | Why |
 | --- | --- |
 | `Documents\GitHub\coding-notes` | Not in git. Live `coding-notes.jsonl` from Log Sage. |
 | `Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. |
+| `Documents\GitHub\bot-hlth-stat` | Dashboard changelog is written on BOT-HOUSE. |
+| `Documents\GitHub\brk-out-bot` | Same. `brk-out-engine` stays the local `sage-docs` folder. |
+| `Documents\GitHub\log-sage` | Log Sage runs here. Changelog and `OPERATIONS.md` are written on this host. |
 
-Other registered projects are git-tracked. Point those tags at the CODE-HOUSE clones. Do not copy `proj-sage\data\` (Chroma) between machines.
+`proj-sage`, `code-house-stat`, `live-engine`, `swing-engine`, and `brk-out-engine` stay on the CODE-HOUSE clones. Do not copy `proj-sage\data\` (Chroma) between machines.
 
 ## Project tags
 

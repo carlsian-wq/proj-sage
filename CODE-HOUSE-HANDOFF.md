@@ -16,7 +16,7 @@ Project Sage is a local RAG app. It is not a trading bot. It does not place orde
 | Streamlit `app.py`, Chroma, watcher | CODE-HOUSE only, from that machine's `proj-sage` clone |
 | Ollama `qwen2.5:7b` + `nomic-embed-text` | CODE-HOUSE `http://127.0.0.1:11434` |
 | Log Sage, trading engines, journals | Stay on BOT-HOUSE |
-| Live files Sage must read | Two SMB folders exported from BOT-HOUSE (`coding-notes`, `hyperliquid-bot`) |
+| Live files Sage must read | SMB folders exported from BOT-HOUSE (`coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, `log-sage`) |
 | Git-tracked docs | CODE-HOUSE clones of those repos, after `git pull` |
 
 One Project Sage process in the house. BOT-HOUSE port **8504 was not listening** at 11:31 PDT on 2026-09-27. Leave it that way. Do not start Sage there again after CODE-HOUSE is up.
@@ -27,18 +27,24 @@ Ollama on BOT-HOUSE stays up. Log Sage (port 8502) uses it. Do not point this ap
 
 ## Folders to share from BOT-HOUSE
 
-Share these two folders, **read-only**, and no others. Measured 2026-09-27 from the live registry in `proj-sage/data/registry.json` plus a walk with `sage/loaders.py` skip rules. Do not share or register `rh-agnt-trdg`. That tag, and `rh-agnt-engine`, were removed from Project Sage on 2026-11-21.
+Share these folders, **read-only**. Do not share or register `rh-agnt-trdg`. That tag, and `rh-agnt-engine`, were removed from Project Sage on 2026-11-21. The leftover `rh-agnt-trdg` junction may stay on disk. Do not add it back as a folder source.
 
 | Share junction name | BOT-HOUSE path | Why a git clone is not enough |
 | --- | --- | --- |
-| `coding-notes` | `C:\Users\c_sia\Documents\GitHub\coding-notes` | Not a git repo. Live file `coding-notes.jsonl` (~2.1 MB) is rewritten by Log Sage about every 120 seconds from this host's `C:\Users\c_sia\.grok\sessions`. |
-| `hyperliquid-bot` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot` | 11 gitignored files Sage indexes, including root `.env` and the engine state JSON files. `liquidity_trend.json` is tracked but had uncommitted changes on BOT-HOUSE. |
+| `coding-notes` | `C:\Users\c_sia\Documents\GitHub\coding-notes` | Not a git repo. Live file `coding-notes.jsonl` is rewritten by Log Sage about every 120 seconds from this host's `C:\Users\c_sia\.grok\sessions`. |
+| `hyperliquid-bot` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. Edits on the running host are not in the CODE-HOUSE clone until a pull. |
+| `bot-hlth-stat` | `C:\Users\c_sia\Documents\GitHub\bot-hlth-stat` | Dashboard and changelog are edited on BOT-HOUSE. A CODE-HOUSE clone stays stale until `git pull`. |
+| `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` | Same. The parent walk skips `sage-docs`. Tag `brk-out-engine` stays the local `sage-docs\brk-out-engine` folder on CODE-HOUSE. |
+| `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` | Log Sage runs on BOT-HOUSE. Its changelog and `OPERATIONS.md` are written there. |
 
-UNC root after the operator script below:
+UNC root. Use this hostname spelling in the registry:
 
 ```text
 \\BOT-HOUSE-A7-MAX\SageLive\coding-notes
 \\BOT-HOUSE-A7-MAX\SageLive\hyperliquid-bot
+\\BOT-HOUSE-A7-MAX\SageLive\bot-hlth-stat
+\\BOT-HOUSE-A7-MAX\SageLive\brk-out-bot
+\\BOT-HOUSE-A7-MAX\SageLive\log-sage
 ```
 
 BOT-HOUSE Wi-Fi IPv4 on 2026-09-27 was **10.0.0.200** (manual address). Use the hostname if it resolves. If it does not, use `\\10.0.0.200\SageLive\...` for every registry path. Pick one spelling and keep it. Chunk ids are `project-tag::absolute-path::chunk-index`. A second spelling of the same folder duplicates the index.
@@ -66,19 +72,17 @@ Poll cost of these two trees is small. With skip rules applied, the walker enter
 
 ## Folders that do not need a share
 
-These registry sources are entirely git-tracked, and on 2026-09-27 each repo was clean and level with its origin. Point Sage at the CODE-HOUSE clone after `git pull`.
+These tags stay on the CODE-HOUSE clone. `bot-hlth-stat`, `brk-out-bot`, and `log-sage` are SageLive tags above, not rows in this table.
 
 | Project tag | CODE-HOUSE path (confirm the clone root) |
 | --- | --- |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
-| `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` |
-| `net-comd-comp` | `C:\Users\c_sia\Documents\GitHub\net-comd-comp` |
-| `pred-mkt-sage` | `C:\Users\c_sia\Documents\GitHub\pred-mkt-sage` |
-| `bot-hlth-stat` | `C:\Users\c_sia\Documents\GitHub\bot-hlth-stat` |
-| `sol-ms-bot` | `C:\Users\c_sia\Documents\GitHub\sol-ms-bot` |
-| `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` |
+| `code-house-stat` | `C:\Users\c_sia\Documents\GitHub\code-house-stat` |
+| `live-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
+| `swing-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
+| `brk-out-engine` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
 
-If a clone is missing, stop and tell the user. Do not substitute the BOT-HOUSE copy over SMB for these, and do not clone extra repos beyond what the user already has unless they ask.
+If one of these clones is missing, stop and tell the user. Do not register `net-comd-comp`, `pred-mkt-sage`, or `sol-ms-bot` again unless the operator reopens them.
 
 ### Do not share, and do not copy onto CODE-HOUSE
 
@@ -108,7 +112,7 @@ CODE-HOUSE has its own `C:\Users\c_sia\.grok\sessions`. Those sessions are not i
 
 ## Step 0 — operator on BOT-HOUSE (you cannot do this from CODE-HOUSE)
 
-**Status (2026-09-27):** done on BOT-HOUSE. `C:\Users\c_sia\Documents\SageLive` exists, and SMB share `SageLive` is read-only for `BOT-HOUSE-A7-MA\c_sia`. Register `coding-notes` and `hyperliquid-bot` only. Do not register `rh-agnt-trdg` or `rh-agnt-engine` (removed from Project Sage on 2026-11-21). A normal window cannot create shares: `New-SmbShare` returns `Access is denied` even though `c_sia` is an administrator, because UAC filters that token. The share command has to run in a process that says Administrator.
+**Status:** the share already exists. `C:\Users\c_sia\Documents\SageLive` is SMB share `SageLive`, read-only for `BOT-HOUSE-A7-MA\c_sia`. Junctions to add, if missing: `coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, `log-sage`. Do not register `rh-agnt-trdg` or `rh-agnt-engine`. A normal window cannot create shares: `New-SmbShare` returns `Access is denied` even though `c_sia` is an administrator, because UAC filters that token. Adding a junction inside the existing folder does not need a new share. The share command has to run in a process that says Administrator.
 
 Skip the recreate block if this already opens:
 
@@ -137,6 +141,9 @@ New-Item -ItemType Directory -Force -Path $root | Out-Null
 $links = @{
   "coding-notes"    = "C:\Users\c_sia\Documents\GitHub\coding-notes"
   "hyperliquid-bot" = "C:\Users\c_sia\Documents\GitHub\hyperliquid-bot"
+  "bot-hlth-stat"   = "C:\Users\c_sia\Documents\GitHub\bot-hlth-stat"
+  "brk-out-bot"     = "C:\Users\c_sia\Documents\GitHub\brk-out-bot"
+  "log-sage"        = "C:\Users\c_sia\Documents\GitHub\log-sage"
 }
 foreach ($name in $links.Keys) {
   $dest = Join-Path $root $name
@@ -279,17 +286,18 @@ Open `http://10.0.0.201:8504`. In the sidebar, add each folder once. The default
 | --- | --- |
 | `coding-notes` | `\\BOT-HOUSE-A7-MAX\SageLive\coding-notes` |
 | `hyperliquid-bot` | `\\BOT-HOUSE-A7-MAX\SageLive\hyperliquid-bot` |
+| `bot-hlth-stat` | `\\BOT-HOUSE-A7-MAX\SageLive\bot-hlth-stat` |
+| `brk-out-bot` | `\\BOT-HOUSE-A7-MAX\SageLive\brk-out-bot` |
+| `log-sage` | `\\BOT-HOUSE-A7-MAX\SageLive\log-sage` |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
-| `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` |
-| `net-comd-comp` | `C:\Users\c_sia\Documents\GitHub\net-comd-comp` |
-| `pred-mkt-sage` | `C:\Users\c_sia\Documents\GitHub\pred-mkt-sage` |
-| `bot-hlth-stat` | `C:\Users\c_sia\Documents\GitHub\bot-hlth-stat` |
-| `sol-ms-bot` | `C:\Users\c_sia\Documents\GitHub\sol-ms-bot` |
-| `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` |
+| `code-house-stat` | `C:\Users\c_sia\Documents\GitHub\code-house-stat` |
+| `brk-out-engine` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
+| `live-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
+| `swing-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
 
-Do not add `rh-agnt-trdg`, `rh-agnt-engine`, or `demo-sage`. `sample_docs` is a skipped directory. Do not also add the local `hyperliquid-bot` or `coding-notes` clones. Two copies of the same docs under one tag make search return a mix of live BOT-HOUSE state and a stale checkout.
+Do not add `net-comd-comp`, `pred-mkt-sage`, `sol-ms-bot`, `rh-agnt-trdg`, `rh-agnt-engine`, or `demo-sage`. `sample_docs` is a skipped directory. Do not also add the local clones of `coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, or `log-sage`. Two copies of the same docs under one tag make search return a mix of live BOT-HOUSE state and a stale checkout.
 
-If the clone root is not `C:\Users\c_sia\Documents\GitHub`, use the real local path for the git-backed tags. Keep the two SageLive paths as UNC.
+If the clone root is not `C:\Users\c_sia\Documents\GitHub`, use the real local path for the git-backed tags. Keep the SageLive paths as UNC with the `BOT-HOUSE-A7-MAX` hostname.
 
 Adding a folder ingests it. After each folder in the table is added, use **Force ingest** on each tag once so the file counts settle. Expect the first `coding-notes` embed to take several minutes (`coding-notes.jsonl` plus the July snapshot).
 
@@ -323,7 +331,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 2. Sidebar watcher line says poll-only and the count of registered folder sources.
 3. Search filtered to `coding-notes` for a phrase you can see in `coding-notes.jsonl` (a project name such as `hyperliquid-bot` is enough). The cited path starts with the UNC share.
 4. Search filtered to `hyperliquid-bot` for `poll_interval_sec` or `engine_state`. The cited path is the UNC share, not `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot` on CODE-HOUSE.
-5. Search filtered to `brk-out-bot` for a heading in that repo's `STARTUP.md`. The cited path is the local clone.
+5. Search filtered to `bot-hlth-stat`, `brk-out-bot`, or `log-sage`. The cited path starts with `\\BOT-HOUSE-A7-MAX\SageLive\`.
 6. Ask one natural-language question with Ollama up. An answer with sources counts as success. Stop the server if the console dies during ingest; see `TROUBLESHOOTING.md` ("Add folder source kills Streamlit" and "Error finding id"). Rebuild command, only while Streamlit is stopped: `.\.venv\Scripts\python.exe scripts\rebuild_chroma.py`.
 
 ---
@@ -344,7 +352,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 
 ## Later pulls
 
-Git-backed tags go stale until someone `git pull`s those clones on CODE-HOUSE. The two SageLive tags (`coding-notes`, `hyperliquid-bot`) update through the watcher without a pull.
+Git-backed tags that still point at CODE-HOUSE clones go stale until someone `git pull`s those clones. The SageLive tags (`coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, `log-sage`) update through the watcher without a pull. `brk-out-engine`, `live-engine`, and `swing-engine` still read local `sage-docs` folders.
 
 After a future push from either machine, pull the local clones. Force-ingest a tag only when a pull changed its docs and the watcher has not picked them up.
 

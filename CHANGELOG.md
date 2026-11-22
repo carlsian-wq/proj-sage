@@ -9,6 +9,50 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-11-22 — Rebuild Chroma after Streamlit access violation
+
+**Project:** `proj-sage`
+**When:** 2026-11-22 13:18 PST
+**Summary:** Project Sage died when Chroma's count call hit a Windows access violation. The index was rebuilt from the registered folders and Streamlit was started again.
+
+**Details:**
+- The console's last Python line was `ConnectionResetError: [WinError 10054]`. The process was already gone, and `count()` on the open index then crashed with `Windows fatal exception: access violation` inside `chromadb`.
+- `rh-agnt-trdg` was not a registered source. The SageLive folder list after the removal is `bot-hlth-stat`, `brk-out-bot`, `coding-notes`, `hyperliquid-bot`, and `log-sage`.
+- `scripts/rebuild_chroma.py` moved the broken store to `data/chroma_backup_20261122_211226` and re-ingested every registered folder. 81 files, 7736 chunks, 0 failures.
+- That native crash is the same one in TROUBLESHOOTING: a Chroma access violation kills the process, and Streamlit cannot catch it.
+
+**Verify / operate:**
+- Open http://10.0.0.201:8504. The watcher should say 10 folder sources.
+- Indexed chunks on All projects should be about 7736.
+- The old console window can be closed. It is stuck on the error and is not serving the port.
+
+**Files:** `data/chroma` (rebuilt), `scripts/rebuild_chroma.py` (used, not edited)
+
+---
+
+## 2026-11-22 — bot-hlth-stat, brk-out-bot, and log-sage read SageLive
+
+**Project:** `proj-sage`
+**When:** 2026-11-22 12:55 PST
+**Summary:** Project Sage now reads `bot-hlth-stat`, `brk-out-bot`, and `log-sage` from the BOT-HOUSE SageLive share. A changelog saved on BOT-HOUSE shows up without a git pull on CODE-HOUSE.
+
+**Details:**
+- Added junctions on BOT-HOUSE under `C:\Users\c_sia\Documents\SageLive` for those three repos. The existing read-only `SageLive` share already covers that folder, so no new share was created.
+- Registry paths are `\\BOT-HOUSE-A7-MAX\SageLive\bot-hlth-stat`, `\\BOT-HOUSE-A7-MAX\SageLive\brk-out-bot`, and `\\BOT-HOUSE-A7-MAX\SageLive\log-sage`. The CODE-HOUSE clones are not also registered.
+- Rebuilt those three tags in Chroma. Removed 67, 141, and 64 chunks that cited the local clones. Wrote 67, 141, and 65 chunks from the share. The collection went from 7729 chunks to 7730. log-sage picked up one extra file, `.grok-test.md`.
+- `brk-out-engine`, `live-engine`, and `swing-engine` still read the local `sage-docs` folders. The parent walks skip `sage-docs`.
+- `code-house-stat` and `proj-sage` stay on this PC.
+
+**Verify / operate:**
+- Hard-refresh http://10.0.0.201:8504.
+- The sidebar path for `bot-hlth-stat` should start with `\\BOT-HOUSE-A7-MAX\SageLive\`.
+- A search for the GPU/VRAM host-tab update should cite `\\BOT-HOUSE-A7-MAX\SageLive\bot-hlth-stat\CHANGELOG.md`.
+- From CODE-HOUSE: `Get-ChildItem \\BOT-HOUSE-A7-MAX\SageLive\bot-hlth-stat\CHANGELOG.md` (same for `brk-out-bot` and `log-sage`).
+
+**Files:** `data/registry.json`, `AGENTS.md`, `STARTUP.md`, `README.md`, `CODE-HOUSE-HANDOFF.md`
+
+---
+
 ## 2026-11-21 — Remove demo-sage from the Project Sage sidebar
 
 **Project:** `proj-sage`
