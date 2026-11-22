@@ -9,6 +9,28 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-11-21 — Remove demo-sage from the Project Sage sidebar
+
+**Project:** `proj-sage`
+**When:** 2026-11-21 17:45 PST
+**Summary:** The Project Sage dropdowns no longer list `demo-sage`. That tag was the original sample folder and is not a real project.
+
+**Details:**
+- Removed the folder source `C:\Users\c_sia\Documents\GitHub\proj-sage\sample_docs` from `data/registry.json`.
+- Deleted 4 Chroma chunks: 2 under the `demo-sage` tag and 2 copies under `proj-sage`. The collection went from 7689 chunks to 7685.
+- Folder walks now skip a directory named `sample_docs`, so the parent `proj-sage` tag does not index `auth.md` and `deploy.txt` again.
+- The registry now has 10 folder sources. `AGENTS.md`, `STARTUP.md`, `README.md`, and `CODE-HOUSE-HANDOFF.md` say not to add `demo-sage` back.
+- The `sample_docs` files remain on disk.
+
+**Verify / operate:**
+- Hard-refresh http://10.0.0.201:8504.
+- Active project and Filter by project tag must not list `demo-sage`.
+- The watcher line should say 10 folder sources.
+
+**Files:** `data/registry.json`, `sage/config.py`, `AGENTS.md`, `STARTUP.md`, `README.md`, `CODE-HOUSE-HANDOFF.md`
+
+---
+
 ## 2026-11-21 — One Python app is two processes
 
 **Project:** `proj-sage`

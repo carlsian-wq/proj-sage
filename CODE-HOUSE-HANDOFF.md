@@ -71,7 +71,6 @@ These registry sources are entirely git-tracked, and on 2026-09-27 each repo was
 | Project tag | CODE-HOUSE path (confirm the clone root) |
 | --- | --- |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
-| `demo-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage\sample_docs` |
 | `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` |
 | `net-comd-comp` | `C:\Users\c_sia\Documents\GitHub\net-comd-comp` |
 | `pred-mkt-sage` | `C:\Users\c_sia\Documents\GitHub\pred-mkt-sage` |
@@ -281,7 +280,6 @@ Open `http://10.0.0.201:8504`. In the sidebar, add each folder once. The default
 | `coding-notes` | `\\BOT-HOUSE-A7-MAX\SageLive\coding-notes` |
 | `hyperliquid-bot` | `\\BOT-HOUSE-A7-MAX\SageLive\hyperliquid-bot` |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
-| `demo-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage\sample_docs` |
 | `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` |
 | `net-comd-comp` | `C:\Users\c_sia\Documents\GitHub\net-comd-comp` |
 | `pred-mkt-sage` | `C:\Users\c_sia\Documents\GitHub\pred-mkt-sage` |
@@ -289,7 +287,7 @@ Open `http://10.0.0.201:8504`. In the sidebar, add each folder once. The default
 | `sol-ms-bot` | `C:\Users\c_sia\Documents\GitHub\sol-ms-bot` |
 | `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` |
 
-Do not add `rh-agnt-trdg` or `rh-agnt-engine`. Do not also add the local `hyperliquid-bot` or `coding-notes` clones. Two copies of the same docs under one tag make search return a mix of live BOT-HOUSE state and a stale checkout.
+Do not add `rh-agnt-trdg`, `rh-agnt-engine`, or `demo-sage`. `sample_docs` is a skipped directory. Do not also add the local `hyperliquid-bot` or `coding-notes` clones. Two copies of the same docs under one tag make search return a mix of live BOT-HOUSE state and a stale checkout.
 
 If the clone root is not `C:\Users\c_sia\Documents\GitHub`, use the real local path for the git-backed tags. Keep the two SageLive paths as UNC.
 
@@ -302,7 +300,6 @@ Rough file counts from the BOT-HOUSE disk on 2026-09-27 (proj-sage grows by one 
 | coding-notes | 7 |
 | hyperliquid-bot | 35 |
 | proj-sage | 10 |
-| demo-sage | 2 |
 | log-sage | 7 |
 | net-comd-comp | 6 |
 | pred-mkt-sage | 7 |

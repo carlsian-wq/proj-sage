@@ -113,6 +113,8 @@ SKIP_DIR_NAMES = {
     "_archive",
     # Engine current-spec folders are registered as their own Sage tags.
     "sage-docs",
+    # Original Project Sage smoke folder. Not a real project tag.
+    "sample_docs",
 }
 
 

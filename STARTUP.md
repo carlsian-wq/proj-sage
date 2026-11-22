@@ -55,7 +55,7 @@ Project Sage's Ollama work is heavy next to the live bots. Run the Streamlit app
 
 Procedure for the CODE-HOUSE agent: **[CODE-HOUSE-HANDOFF.md](CODE-HOUSE-HANDOFF.md)**.
 
-Brought up on this PC on 2026-09-27. The UI listens on http://10.0.0.201:8504. The watcher is poll-only, scan every 120 seconds. Leave port 8504 stopped on BOT-HOUSE. As of 2026-11-21 the registry has 11 folder sources. Do not add `rh-agnt-trdg` or `rh-agnt-engine`.
+Brought up on this PC on 2026-09-27. The UI listens on http://10.0.0.201:8504. The watcher is poll-only, scan every 120 seconds. Leave port 8504 stopped on BOT-HOUSE. As of 2026-11-21 the registry has 10 folder sources. Do not add `rh-agnt-trdg`, `rh-agnt-engine`, or `demo-sage`.
 
 LAN Edge shortcut (icon travels with the folder):
 
