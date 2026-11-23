@@ -70,10 +70,10 @@ Share these BOT-HOUSE folders (read-only SMB share `SageLive`). Register each ta
 | `Documents\GitHub\coding-notes` | Not in git. Live `coding-notes.jsonl` from Log Sage. |
 | `Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. |
 | `Documents\GitHub\bot-hlth-stat` | Dashboard changelog is written on BOT-HOUSE. |
-| `Documents\GitHub\brk-out-bot` | Same. `brk-out-engine` stays the local `sage-docs` folder. |
+| `Documents\GitHub\brk-out-bot` | Same. Tag `brk-out-ops` stays the local `sage-docs\brk-out-engine` folder. |
 | `Documents\GitHub\log-sage` | Log Sage runs here. Changelog and `OPERATIONS.md` are written on this host. |
 
-`proj-sage`, `code-house-stat`, `live-engine`, `swing-engine`, and `brk-out-engine` stay on the CODE-HOUSE clones. Do not copy `proj-sage\data\` (Chroma) between machines.
+`proj-sage`, `code-house-stat`, `scalp-eng-ops`, `swing-eng-ops`, and `brk-out-ops` stay on the CODE-HOUSE clones. The three ops tags are each engine's `OPERATIONS.md` only. Do not copy `proj-sage\data\` (Chroma) between machines.
 
 ## Project tags
 

@@ -498,6 +498,10 @@ def _main_search() -> None:
 
     projects = _refresh_projects()
     filter_options = ["All projects"] + projects
+    # A renamed tag left in this browser session is not in the options list.
+    # Streamlit errors if the widget value is missing. Reset before the selectbox.
+    if st.session_state.get("tag_filter") not in filter_options:
+        st.session_state.tag_filter = "All projects"
 
     col_filter, col_stats = st.columns([2, 1])
     with col_filter:

@@ -34,7 +34,7 @@ Share these folders, **read-only**. Do not share or register `rh-agnt-trdg`. Tha
 | `coding-notes` | `C:\Users\c_sia\Documents\GitHub\coding-notes` | Not a git repo. Live file `coding-notes.jsonl` is rewritten by Log Sage about every 120 seconds from this host's `C:\Users\c_sia\.grok\sessions`. |
 | `hyperliquid-bot` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot` | Gitignored engine state and root `.env`. Edits on the running host are not in the CODE-HOUSE clone until a pull. |
 | `bot-hlth-stat` | `C:\Users\c_sia\Documents\GitHub\bot-hlth-stat` | Dashboard and changelog are edited on BOT-HOUSE. A CODE-HOUSE clone stays stale until `git pull`. |
-| `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` | Same. The parent walk skips `sage-docs`. Tag `brk-out-engine` stays the local `sage-docs\brk-out-engine` folder on CODE-HOUSE. |
+| `brk-out-bot` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot` | Same. The parent walk skips `sage-docs`. Tag `brk-out-ops` is the local `sage-docs\brk-out-engine` folder (that file is `OPERATIONS.md`). |
 | `log-sage` | `C:\Users\c_sia\Documents\GitHub\log-sage` | Log Sage runs on BOT-HOUSE. Its changelog and `OPERATIONS.md` are written there. |
 
 UNC root. Use this hostname spelling in the registry:
@@ -78,9 +78,9 @@ These tags stay on the CODE-HOUSE clone. `bot-hlth-stat`, `brk-out-bot`, and `lo
 | --- | --- |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
 | `code-house-stat` | `C:\Users\c_sia\Documents\GitHub\code-house-stat` |
-| `live-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
-| `swing-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
-| `brk-out-engine` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
+| `scalp-eng-ops` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
+| `swing-eng-ops` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
+| `brk-out-ops` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
 
 If one of these clones is missing, stop and tell the user. Do not register `net-comd-comp`, `pred-mkt-sage`, or `sol-ms-bot` again unless the operator reopens them.
 
@@ -291,9 +291,9 @@ Open `http://10.0.0.201:8504`. In the sidebar, add each folder once. The default
 | `log-sage` | `\\BOT-HOUSE-A7-MAX\SageLive\log-sage` |
 | `proj-sage` | `C:\Users\c_sia\Documents\GitHub\proj-sage` |
 | `code-house-stat` | `C:\Users\c_sia\Documents\GitHub\code-house-stat` |
-| `brk-out-engine` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
-| `live-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
-| `swing-engine` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
+| `brk-out-ops` | `C:\Users\c_sia\Documents\GitHub\brk-out-bot\sage-docs\brk-out-engine` |
+| `scalp-eng-ops` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\live-engine` |
+| `swing-eng-ops` | `C:\Users\c_sia\Documents\GitHub\hyperliquid-bot\sage-docs\swing-engine` |
 
 Do not add `net-comd-comp`, `pred-mkt-sage`, `sol-ms-bot`, `rh-agnt-trdg`, `rh-agnt-engine`, or `demo-sage`. `sample_docs` is a skipped directory. Do not also add the local clones of `coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, or `log-sage`. Two copies of the same docs under one tag make search return a mix of live BOT-HOUSE state and a stale checkout.
 
@@ -352,7 +352,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_shortcuts.ps1
 
 ## Later pulls
 
-Git-backed tags that still point at CODE-HOUSE clones go stale until someone `git pull`s those clones. The SageLive tags (`coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, `log-sage`) update through the watcher without a pull. `brk-out-engine`, `live-engine`, and `swing-engine` still read local `sage-docs` folders.
+Git-backed tags that still point at CODE-HOUSE clones go stale until someone `git pull`s those clones. The SageLive tags (`coding-notes`, `hyperliquid-bot`, `bot-hlth-stat`, `brk-out-bot`, `log-sage`) update through the watcher without a pull. `brk-out-ops`, `scalp-eng-ops`, and `swing-eng-ops` still read the local `sage-docs` folders. Those tags are each engine's `OPERATIONS.md`. Do not register the old names `brk-out-engine`, `live-engine`, or `swing-engine`.
 
 After a future push from either machine, pull the local clones. Force-ingest a tag only when a pull changed its docs and the watcher has not picked them up.
 

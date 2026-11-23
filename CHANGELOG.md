@@ -9,6 +9,27 @@ Entries must include **When:** with Pacific wall time and **PDT** or **PST** (BO
 
 ---
 
+## 2026-11-22 — Rename engine spec tags to ops
+
+**Project:** `proj-sage`
+**When:** 2026-11-22 22:50 PST
+**Summary:** The three engine spec tags now say they are the operations file. `brk-out-engine` is `brk-out-ops`, `live-engine` is `scalp-eng-ops`, and `swing-engine` is `swing-eng-ops`.
+
+**Details:**
+- Each tag still points at the same local `sage-docs` folder and still indexes only `OPERATIONS.md`. The folders on disk were not renamed.
+- Old Chroma chunks were removed (12, 17, and 12) and the same files were embedded under the new tags. The collection stayed at 7736 chunks.
+- Dropdowns that still had an old tag selected reset to All projects instead of erroring.
+- Do not register `brk-out-engine`, `live-engine`, or `swing-engine` again.
+
+**Verify / operate:**
+- Hard-refresh http://10.0.0.201:8504.
+- Active project and Filter by project tag should list `brk-out-ops`, `scalp-eng-ops`, and `swing-eng-ops`.
+- They should not list `brk-out-engine`, `live-engine`, or `swing-engine`.
+
+**Files:** `data/registry.json`, `app.py`, `AGENTS.md`, `STARTUP.md`, `README.md`, `CODE-HOUSE-HANDOFF.md`
+
+---
+
 ## 2026-11-22 — Rebuild Chroma after Streamlit access violation
 
 **Project:** `proj-sage`
